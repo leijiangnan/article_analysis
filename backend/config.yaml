@@ -12,8 +12,8 @@ server:
 
 openai:
   api_key: your_openai_api_key_here
-  model: gpt-3.5-turbo
-  max_tokens: 2000
+  api_base: https://api.moonshot.cn/v1  # Moonshot API基础URL，可自定义
+  model: kimi-k2-0905-preview
 
 log:
   level: info

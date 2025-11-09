@@ -15,12 +15,19 @@ import (
 type OpenAIClient struct {
 	client *openai.Client
 	log    *logger.Logger
+	config *config.Config
 }
 
 func NewOpenAIClient(cfg *config.Config, log *logger.Logger) *OpenAIClient {
+	clientConfig := openai.DefaultConfig(cfg.OpenAI.APIKey)
+	if cfg.OpenAI.APIBase != "" {
+		clientConfig.BaseURL = cfg.OpenAI.APIBase
+	}
+	
 	return &OpenAIClient{
-		client: openai.NewClient(cfg.OpenAI.APIKey),
+		client: openai.NewClientWithConfig(clientConfig),
 		log:    log,
+		config: cfg,
 	}
 }
 
@@ -39,10 +46,13 @@ type AnalysisResponse struct {
 func (c *OpenAIClient) AnalyzeArticle(ctx context.Context, content string) (*AnalysisResponse, error) {
 	prompt := c.buildAnalysisPrompt(content)
 	
+	// 使用配置的模型，如果没有配置则使用默认的GPT-3.5-turbo
+	model := c.getModel()
+	
 	resp, err := c.client.CreateChatCompletion(
 		ctx,
 		openai.ChatCompletionRequest{
-			Model: openai.GPT3Dot5Turbo,
+			Model: model,
 			Messages: []openai.ChatCompletionMessage{
 				{
 					Role:    openai.ChatMessageRoleSystem,
@@ -53,7 +63,6 @@ func (c *OpenAIClient) AnalyzeArticle(ctx context.Context, content string) (*Ana
 					Content: prompt,
 				},
 			},
-			MaxTokens: 2000,
 			Temperature: 0.7,
 		},
 	)
@@ -99,6 +108,13 @@ func (c *OpenAIClient) buildAnalysisPrompt(content string) string {
 }
 
 文章内容长度：%d字符`, content, len(content))
+}
+
+func (c *OpenAIClient) getModel() string {
+	if c.config.OpenAI.Model != "" {
+		return c.config.OpenAI.Model
+	}
+	return "kimi-k2-0905-preview" // 默认Moonshot模型
 }
 
 func (c *OpenAIClient) parseAIResponse(content string) (*AnalysisResponse, error) {

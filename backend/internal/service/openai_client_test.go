@@ -141,6 +141,30 @@ func TestOpenAIClient_parseAIResponse_NoJSON(t *testing.T) {
 	assert.Contains(t, err.Error(), "无法解析AI响应格式")
 }
 
+func TestOpenAIClient_getModel(t *testing.T) {
+	log := logger.NewLogger("test")
+	
+	// 测试配置了模型的情况
+	cfg1 := &config.Config{
+		OpenAI: config.OpenAIConfig{
+			APIKey: "test-api-key",
+			Model:  "gpt-4",
+		},
+	}
+	client1 := NewOpenAIClient(cfg1, log)
+	assert.Equal(t, "gpt-4", client1.getModel())
+	
+	// 测试未配置模型的情况（使用默认）
+	cfg2 := &config.Config{
+		OpenAI: config.OpenAIConfig{
+			APIKey: "test-api-key",
+			Model:  "",
+		},
+	}
+	client2 := NewOpenAIClient(cfg2, log)
+	assert.Equal(t, "kimi-k2-0905-preview", client2.getModel())
+}
+
 func TestAnalysisResult_JSONMarshal(t *testing.T) {
 	result := &AnalysisResponse{
 		CoreViewpoints:   "核心观点",

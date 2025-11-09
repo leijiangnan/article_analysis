@@ -28,8 +28,8 @@ type ServerConfig struct {
 
 type OpenAIConfig struct {
 	APIKey   string `mapstructure:"api_key"`
+	APIBase  string `mapstructure:"api_base"`
 	Model    string `mapstructure:"model"`
-	MaxTokens int   `mapstructure:"max_tokens"`
 }
 
 type LogConfig struct {
@@ -53,13 +53,17 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.mode", "debug")
 	
-	viper.SetDefault("openai.model", "gpt-3.5-turbo")
-	viper.SetDefault("openai.max_tokens", 2000)
+	viper.SetDefault("openai.api_base", "https://api.moonshot.cn/v1")
+	viper.SetDefault("openai.model", "kimi-k2-0905-preview")
 	
 	viper.SetDefault("log.level", "info")
 	
 	// 读取环境变量
 	viper.AutomaticEnv()
+	
+	// 绑定特定的环境变量，设置优先级
+	viper.BindEnv("openai.api_key", "OPENAI_API_KEY")
+	viper.BindEnv("openai.api_base", "OPENAI_API_BASE")
 	
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
