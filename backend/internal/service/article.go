@@ -124,6 +124,32 @@ func (s *ArticleService) GetAuthors() ([]string, error) {
 	return s.repo.GetAuthors()
 }
 
+// DeleteArticle 删除文章
+func (s *ArticleService) DeleteArticle(id uint64) error {
+	// 首先获取文章信息
+	article, err := s.repo.GetByID(id)
+	if err != nil {
+		return errors.New("文章不存在")
+	}
+	
+	// 删除关联的文件
+	if article.FilePath != "" {
+		if err := os.Remove(article.FilePath); err != nil {
+			s.log.Warn("删除文件失败", zap.String("file_path", article.FilePath), zap.Error(err))
+			// 继续删除数据库记录，即使文件删除失败
+		}
+	}
+	
+	// 删除数据库记录
+	if err := s.repo.Delete(id); err != nil {
+		s.log.Error("删除文章数据库记录失败", err)
+		return errors.New("删除文章失败")
+	}
+	
+	s.log.Info("文章删除成功", zap.Uint64("id", id), zap.String("title", article.Title))
+	return nil
+}
+
 // 从内容中提取标题
 func (s *ArticleService) extractTitleFromContent(content, filename string) string {
 	lines := strings.Split(content, "\n")

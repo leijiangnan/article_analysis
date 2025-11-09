@@ -138,3 +138,33 @@ func (h *ArticleHandler) GetAuthors(c *gin.Context) {
 		Timestamp: time.Now().Unix(),
 	})
 }
+
+// DeleteArticle 删除文章
+func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ApiResponse{
+			Code:      400,
+			Message:   "无效的文章ID",
+			Timestamp: time.Now().Unix(),
+		})
+		return
+	}
+
+	if err := h.articleService.DeleteArticle(id); err != nil {
+		c.JSON(http.StatusInternalServerError, model.ApiResponse{
+			Code:      500,
+			Message:   err.Error(),
+			Timestamp: time.Now().Unix(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, model.ApiResponse{
+		Code:      200,
+		Message:   "删除成功",
+		Data:      nil,
+		Timestamp: time.Now().Unix(),
+	})
+}
