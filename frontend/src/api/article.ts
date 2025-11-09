@@ -5,6 +5,12 @@ export interface UploadArticleRequest {
   file: File
 }
 
+export interface CreateArticleRequest {
+  title: string
+  author: string
+  content: string
+}
+
 export interface ArticleListParams {
   page?: number
   page_size?: number
@@ -22,6 +28,11 @@ export const articleApi = {
         'Content-Type': 'multipart/form-data'
       }
     })
+  },
+
+  // 创建文章（直接输入文本）
+  createArticle: (data: CreateArticleRequest) => {
+    return api.post<ApiResponse<Article>>('/articles/create', data)
   },
 
   // 获取文章列表

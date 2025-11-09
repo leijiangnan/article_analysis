@@ -130,6 +130,62 @@ func (s *ArticleService) GetAuthors() ([]string, error) {
 }
 
 // DeleteArticle 删除文章
+func (s *ArticleService) CreateArticle(title, author, content string) (*model.Article, error) {
+	// 自动提取标题和作者（如果未提供）
+	if title == "" {
+		title = s.extractTitleFromContent(content, "input_text")
+	}
+	if author == "" {
+		author = s.extractAuthorFromContent(content)
+	}
+	
+	// 保存内容到本地文件
+	uploadDir := "./web/uploads"
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		s.log.Error("创建上传目录失败", err)
+		return nil, errors.New("文件保存失败")
+	}
+	
+	filename := time.Now().Format("20060102_150405_") + "input_text.txt"
+	filePath := filepath.Join(uploadDir, filename)
+	
+	// 创建文件并写入内容
+	file, err := os.Create(filePath)
+	if err != nil {
+		s.log.Error("创建文件失败", err)
+		return nil, errors.New("文件保存失败")
+	}
+	defer file.Close()
+	
+	if _, err := file.WriteString(content); err != nil {
+		s.log.Error("写入文件内容失败", err)
+		return nil, errors.New("文件内容保存失败")
+	}
+	
+	// 创建文章记录
+	article := &model.Article{
+		Title:    title,
+		Author:   author,
+		Content:  content,
+		FilePath: filePath,
+		FileSize: int64(len(content)),
+	}
+	
+	if err := s.repo.Create(article); err != nil {
+		s.log.Error("保存文章记录失败", err)
+		// 清理已保存的文件
+		os.Remove(filePath)
+		return nil, errors.New("文章保存失败")
+	}
+	
+	s.log.Info("文章创建成功", 
+		zap.String("title", title), 
+		zap.String("author", author),
+		zap.Int("size", len(content)))
+	
+	return article, nil
+}
+
 func (s *ArticleService) DeleteArticle(id uint64) error {
 	// 首先获取文章信息
 	article, err := s.repo.GetByID(id)

@@ -120,6 +120,7 @@ func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handle
 		articles := api.Group("/articles")
 		{
 			articles.POST("/upload", articleHandler.UploadArticle)
+			articles.POST("/create", articleHandler.CreateArticle)
 			articles.GET("/authors", articleHandler.GetAuthors)
 			articles.GET("", articleHandler.GetArticleList)
 			articles.GET("/with-analysis", articleHandler.GetArticleListWithAnalysis)

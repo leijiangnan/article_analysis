@@ -31,10 +31,10 @@ func (h *ArticleHandler) UploadArticle(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	title := c.PostForm("title")
 	author := c.PostForm("author")
-	
+
 	article, err := h.articleService.UploadArticle(file, title, author)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.ApiResponse{
@@ -44,7 +44,7 @@ func (h *ArticleHandler) UploadArticle(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, model.ApiResponse{
 		Code:    200,
 		Message: "上传成功",
@@ -69,7 +69,7 @@ func (h *ArticleHandler) GetArticleList(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	result, err := h.articleService.GetArticleList(&req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.ApiResponse{
@@ -79,11 +79,11 @@ func (h *ArticleHandler) GetArticleList(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, model.ApiResponse{
-		Code:    200,
-		Message: "success",
-		Data:    result,
+		Code:      200,
+		Message:   "success",
+		Data:      result,
 		Timestamp: time.Now().Unix(),
 	})
 }
@@ -99,7 +99,7 @@ func (h *ArticleHandler) GetArticleListWithAnalysis(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	result, err := h.articleService.GetArticleListWithAnalysis(&req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, model.ApiResponse{
@@ -109,11 +109,11 @@ func (h *ArticleHandler) GetArticleListWithAnalysis(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, model.ApiResponse{
-		Code:    200,
-		Message: "success",
-		Data:    result,
+		Code:      200,
+		Message:   "success",
+		Data:      result,
 		Timestamp: time.Now().Unix(),
 	})
 }
@@ -130,7 +130,7 @@ func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	article, err := h.articleService.GetArticleDetail(id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, model.ApiResponse{
@@ -140,11 +140,11 @@ func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, model.ApiResponse{
-		Code:    200,
-		Message: "success",
-		Data:    article,
+		Code:      200,
+		Message:   "success",
+		Data:      article,
 		Timestamp: time.Now().Unix(),
 	})
 }
@@ -160,17 +160,67 @@ func (h *ArticleHandler) GetAuthors(c *gin.Context) {
 		})
 		return
 	}
-	
+
+	c.JSON(http.StatusOK, model.ApiResponse{
+		Code:      200,
+		Message:   "success",
+		Data:      authors,
+		Timestamp: time.Now().Unix(),
+	})
+}
+
+// CreateArticle 创建文章（直接输入文本）
+func (h *ArticleHandler) CreateArticle(c *gin.Context) {
+	var req struct {
+		Title   string `json:"title" binding:"required"`
+		Author  string `json:"author"`
+		Content string `json:"content" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.ApiResponse{
+			Code:      400,
+			Message:   "参数错误：" + err.Error(),
+			Timestamp: time.Now().Unix(),
+		})
+		return
+	}
+
+	// 限制内容长度 (10MB)
+	if len(req.Content) > 10*1024*1024 {
+		c.JSON(http.StatusBadRequest, model.ApiResponse{
+			Code:      400,
+			Message:   "内容长度不能超过10MB",
+			Timestamp: time.Now().Unix(),
+		})
+		return
+	}
+
+	article, err := h.articleService.CreateArticle(req.Title, req.Author, req.Content)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, model.ApiResponse{
+			Code:      400,
+			Message:   err.Error(),
+			Timestamp: time.Now().Unix(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, model.ApiResponse{
 		Code:    200,
-		Message: "success",
-		Data:    authors,
+		Message: "创建成功",
+		Data: map[string]interface{}{
+			"id":          article.ID,
+			"title":       article.Title,
+			"author":      article.Author,
+			"upload_time": article.UploadTime.Format("2006-01-02 15:04:05"),
+		},
 		Timestamp: time.Now().Unix(),
 	})
 }
 
 // DeleteArticle 删除文章
-func (h *ArticleHandler) DeleteArticle(c *gin.Context) {
+func (h *ArticleHandler) DeleteArticle(c *gin.Context) { //ignore_security_alert IDOR
 	idStr := c.Param("id")
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {

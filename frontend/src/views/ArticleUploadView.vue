@@ -3,7 +3,7 @@
     <el-container>
       <el-header>
         <div class="header-content">
-          <h1>上传文章</h1>
+          <h1>录入文章</h1>
           <el-button @click="$router.push('/articles')">
             <el-icon><arrow-left /></el-icon>
             返回列表
@@ -15,9 +15,25 @@
         <div class="upload-section">
           <el-card>
             <template #header>
-              <h3>选择文件上传</h3>
+              <el-tabs v-model="activeTab" class="upload-tabs">
+                <el-tab-pane label="文件上传" name="file">
+                  <h3>选择文件上传</h3>
+                </el-tab-pane>
+                <el-tab-pane label="文本输入" name="text">
+                  <h3>直接输入文章内容</h3>
+                </el-tab-pane>
+              </el-tabs>
             </template>
-            <FileUpload @upload-success="handleUploadSuccess" @upload-error="handleUploadError" />
+            
+            <!-- 文件上传面板 -->
+            <div v-if="activeTab === 'file'" class="tab-content">
+              <FileUpload @upload-success="handleUploadSuccess" @upload-error="handleUploadError" />
+            </div>
+            
+            <!-- 文本输入面板 -->
+            <div v-if="activeTab === 'text'" class="tab-content">
+              <TextInput @create-success="handleCreateSuccess" @create-error="handleCreateError" />
+            </div>
           </el-card>
         </div>
       </el-main>
@@ -26,12 +42,15 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import FileUpload from '@/components/FileUpload.vue'
+import TextInput from '@/components/TextInput.vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
+const activeTab = ref('file')
 
 const handleUploadSuccess = (data: any) => {
   ElMessage.success('文件上传成功！')
@@ -43,6 +62,23 @@ const handleUploadSuccess = (data: any) => {
 
 const handleUploadError = (error: any) => {
   console.error('上传失败:', error)
+}
+
+const handleCreateSuccess = (data: any) => {
+  ElMessage.success('文章创建成功！')
+  // 创建成功后跳转到文章详情页
+  setTimeout(() => {
+    router.push(`/articles/${data.id}`)
+  }, 1000)
+}
+
+const handleCreateError = (error: any) => {
+  console.error('创建失败:', error)
+  console.error('创建失败详情:', {
+    message: error.message,
+    response: error.response,
+    data: error.response?.data
+  })
 }
 </script>
 
@@ -87,5 +123,17 @@ const handleUploadError = (error: any) => {
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
+}
+
+.upload-tabs {
+  margin: -20px -20px 20px -20px;
+}
+
+.upload-tabs .el-tabs__header {
+  margin-bottom: 0;
+}
+
+.tab-content {
+  min-height: 400px;
 }
 </style>
