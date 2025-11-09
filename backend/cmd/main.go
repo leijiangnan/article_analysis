@@ -122,6 +122,7 @@ func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handle
 			articles.POST("/upload", articleHandler.UploadArticle)
 			articles.GET("/authors", articleHandler.GetAuthors)
 			articles.GET("", articleHandler.GetArticleList)
+			articles.GET("/with-analysis", articleHandler.GetArticleListWithAnalysis)
 			articles.GET("/:id", articleHandler.GetArticleDetail)
 			articles.DELETE("/:id", articleHandler.DeleteArticle)
 			articles.POST("/:id/analyze", analysisHandler.AnalyzeArticle)

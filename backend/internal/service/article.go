@@ -112,6 +112,11 @@ func (s *ArticleService) GetArticleList(req *model.PaginationRequest) (*model.Pa
 	return s.repo.GetList(req)
 }
 
+// GetArticleListWithAnalysis 获取文章列表及分析状态
+func (s *ArticleService) GetArticleListWithAnalysis(req *model.PaginationRequest) (*model.PaginationResponse, error) {
+	return s.repo.GetListWithAnalysis(req)
+}
+
 func (s *ArticleService) GetArticleDetail(id uint64) (*model.Article, error) {
 	article, err := s.repo.GetByID(id)
 	if err != nil {

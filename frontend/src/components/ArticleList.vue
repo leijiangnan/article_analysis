@@ -43,6 +43,16 @@
           {{ formatFileSize(row.file_size) }}
         </template>
       </el-table-column>
+      <el-table-column prop="analysis_status" label="分析状态" width="120">
+        <template #default="{ row }">
+          <el-tag
+            :type="getAnalysisStatusType(row.analysis_status)"
+            size="small"
+          >
+            {{ getAnalysisStatusText(row.analysis_status) }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="upload_time" label="上传时间" width="180">
         <template #default="{ row }">
           {{ formatDate(row.upload_time || row.created_at) }}
@@ -117,7 +127,7 @@ const totalSize = ref(0)
 const loadArticles = async () => {
   loading.value = true
   try {
-    const response = await articleApi.getArticleList({
+    const response = await articleApi.getArticleListWithAnalysis({
       page: currentPage.value,
       page_size: pageSize.value,
       keyword: searchQuery.value || undefined,
@@ -217,6 +227,38 @@ const formatFileSize = (bytes: number) => {
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
+}
+
+// 获取分析状态标签类型
+const getAnalysisStatusType = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'warning'
+    case 'processing':
+      return ''
+    case 'completed':
+      return 'success'
+    case 'failed':
+      return 'danger'
+    default:
+      return 'info'
+  }
+}
+
+// 获取分析状态显示文本
+const getAnalysisStatusText = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return '待分析'
+    case 'processing':
+      return '分析中'
+    case 'completed':
+      return '已完成'
+    case 'failed':
+      return '分析失败'
+    default:
+      return '未分析'
+  }
 }
 
 onMounted(() => {

@@ -7,6 +7,8 @@ export interface Article {
   file_size: number
   created_at: string
   updated_at: string
+  analysis_status?: string
+  has_analysis?: boolean
 }
 
 export interface ArticleAnalysis {

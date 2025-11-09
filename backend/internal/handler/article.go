@@ -88,6 +88,36 @@ func (h *ArticleHandler) GetArticleList(c *gin.Context) {
 	})
 }
 
+// GetArticleListWithAnalysis 获取文章列表及分析状态
+func (h *ArticleHandler) GetArticleListWithAnalysis(c *gin.Context) {
+	var req model.PaginationRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, model.ApiResponse{
+			Code:      400,
+			Message:   "参数错误",
+			Timestamp: time.Now().Unix(),
+		})
+		return
+	}
+	
+	result, err := h.articleService.GetArticleListWithAnalysis(&req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, model.ApiResponse{
+			Code:      500,
+			Message:   "获取文章列表失败",
+			Timestamp: time.Now().Unix(),
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, model.ApiResponse{
+		Code:    200,
+		Message: "success",
+		Data:    result,
+		Timestamp: time.Now().Unix(),
+	})
+}
+
 // GetArticleDetail 获取文章详情
 func (h *ArticleHandler) GetArticleDetail(c *gin.Context) {
 	idStr := c.Param("id")

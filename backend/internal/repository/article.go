@@ -70,6 +70,55 @@ func (r *ArticleRepository) GetList(req *model.PaginationRequest) (*model.Pagina
 	}, nil
 }
 
+// GetListWithAnalysis 获取文章列表及分析状态
+func (r *ArticleRepository) GetListWithAnalysis(req *model.PaginationRequest) (*model.PaginationResponse, error) {
+	var articles []ArticleWithAnalysis
+	var total int64
+	
+	// 使用JOIN查询获取文章及其分析状态
+	query := r.db.Table("articles a").
+		Select(`a.id, a.title, a.author, a.file_path, a.file_size, 
+			a.upload_time, a.created_at, 
+			IFNULL(aa.analysis_status, 'none') as analysis_status,
+			CASE WHEN aa.id IS NOT NULL THEN true ELSE false END as has_analysis`).
+		Joins("LEFT JOIN article_analyses aa ON a.id = aa.article_id")
+	
+	// 搜索条件
+	if req.Keyword != "" {
+		query = query.Where("a.title LIKE ? OR a.content LIKE ? OR a.author LIKE ?", 
+			"%"+req.Keyword+"%", "%"+req.Keyword+"%", "%"+req.Keyword+"%")
+	}
+	
+	if req.Author != "" {
+		query = query.Where("a.author = ?", req.Author)
+	}
+	
+	// 统计总数
+	if err := query.Count(&total).Error; err != nil {
+		return nil, err
+	}
+	
+	// 排序
+	order := req.Sort + " " + req.Order
+	if req.Sort != "title" && req.Sort != "author" && req.Sort != "upload_time" {
+		order = "a.upload_time DESC"
+	}
+	
+	// 分页查询
+	offset := (req.Page - 1) * req.PageSize
+	err := query.Order(order).Offset(offset).Limit(req.PageSize).Scan(&articles).Error
+	if err != nil {
+		return nil, err
+	}
+	
+	return &model.PaginationResponse{
+		Total:    total,
+		Page:     req.Page,
+		PageSize: req.PageSize,
+		List:     articles,
+	}, nil
+}
+
 func (r *ArticleRepository) Update(article *model.Article) error {
 	return r.db.Save(article).Error
 }
@@ -101,4 +150,17 @@ type Article struct {
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 	HasAnalysis bool     `gorm:"-" json:"has_analysis"` // 临时字段，不存储到数据库
+}
+
+// ArticleWithAnalysis 包含分析状态的文章信息
+type ArticleWithAnalysis struct {
+	ID              uint64    `json:"id"`
+	Title           string    `json:"title"`
+	Author          string    `json:"author"`
+	FilePath        string    `json:"file_path"`
+	FileSize        int64     `json:"file_size"`
+	UploadTime      time.Time `json:"upload_time"`
+	CreatedAt       time.Time `json:"created_at"`
+	AnalysisStatus  string    `json:"analysis_status"`
+	HasAnalysis     bool      `json:"has_analysis"`
 }

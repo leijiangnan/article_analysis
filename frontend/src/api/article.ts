@@ -29,6 +29,11 @@ export const articleApi = {
     return api.get<ApiResponse<ArticleListResponse>>('/articles', { params })
   },
 
+  // 获取文章列表及分析状态
+  getArticleListWithAnalysis: (params: ArticleListParams = {}) => {
+    return api.get<ApiResponse<ArticleListResponse>>('/articles/with-analysis', { params })
+  },
+
   // 获取文章详情
   getArticleDetail: (id: number) => {
     return api.get<ApiResponse<Article>>(`/articles/${id}`)
