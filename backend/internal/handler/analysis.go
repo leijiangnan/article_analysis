@@ -4,7 +4,9 @@ import (
 	"article-analysis/internal/model"
 	"article-analysis/internal/service"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -77,6 +79,14 @@ func (h *AnalysisHandler) GetAnalysisResult(c *gin.Context) {
 		return
 	}
 	
+	// 格式化分析结果字段
+	if result != nil {
+		result.CoreViewpoints = formatAnalysisText(result.CoreViewpoints)
+		result.FileStructure = formatAnalysisText(result.FileStructure)
+		result.AuthorThoughts = formatAnalysisText(result.AuthorThoughts)
+		result.RelatedMaterials = formatAnalysisText(result.RelatedMaterials)
+	}
+	
 	c.JSON(http.StatusOK, model.ApiResponse{
 		Code:    200,
 		Message: "success",
@@ -105,4 +115,36 @@ func (h *AnalysisHandler) GetAnalysisStatus(c *gin.Context) {
 		Data:    status,
 		Timestamp: time.Now().Unix(),
 	})
+}
+
+// formatAnalysisText 格式化分析文本，将数字列表格式转换为分行展示
+func formatAnalysisText(text string) string {
+	if text == "" {
+		return text
+	}
+	
+	// 如果文本中包含数字列表格式
+	if strings.Contains(text, "1.") || strings.Contains(text, "1、") {
+		result := text
+		
+		// 首先处理数字列表：在数字前添加换行（除了第一个数字）
+		// 匹配空格或分号后的数字列表项
+		result = regexp.MustCompile(`\s+(\d+)[.、]`).ReplaceAllString(result, "\n$1.")
+		
+		// 然后处理分号分隔的情况
+		result = regexp.MustCompile(`(\d+)[.、]([^；;]+)[;；]\s*(\d+)[.、]`).ReplaceAllString(result, "$1.$2\n$3.")
+		
+		// 处理剩余的分号
+		result = strings.ReplaceAll(result, "；", "\n")
+		result = strings.ReplaceAll(result, ";", "\n")
+		
+		// 清理多余的空格和空行
+		result = strings.TrimSpace(result)
+		// 移除连续的空行
+		result = regexp.MustCompile(`\n\s*\n`).ReplaceAllString(result, "\n")
+		
+		return result
+	}
+	
+	return text
 }

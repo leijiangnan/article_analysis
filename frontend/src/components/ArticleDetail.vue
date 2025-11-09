@@ -205,16 +205,7 @@ const formatDate = (dateString: string) => {
 const formatAnalysisText = (text: string) => {
   if (!text) return ''
   
-  // 更智能的数字列表检测 - 匹配中文数字格式 (1. 2. 3. 等)
-  const chineseNumberPattern = /(?:^|\s)(\d+)[.、]\s*([^\d]+?)(?=\s*\d+[.、]|$)/g
-  const matches = text.match(chineseNumberPattern)
-  
-  if (matches && matches.length > 1) {
-    // 使用更精确的正则表达式重新格式化
-    return text.replace(/(\d+)[.、]\s*([^\d]+?)(?=\s*\d+[.、]|$)/g, '$1. $2<br>').replace(/<br>$/, '')
-  }
-  
-  // 如果不是数字列表，保持原有格式（将换行转换为<br>）
+  // 将换行符转换为<br>标签
   return text.replace(/\n/g, '<br>')
 }
 
@@ -332,7 +323,6 @@ onMounted(() => {
   background-color: #f8f9fa;
   padding: 12px;
   border-radius: 4px;
-  white-space: pre-wrap;
   max-height: 200px;
   overflow-y: auto;
   font-size: 14px;

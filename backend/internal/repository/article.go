@@ -49,9 +49,14 @@ func (r *ArticleRepository) GetList(req *model.PaginationRequest) (*model.Pagina
 		return nil, err
 	}
 	
-	// 排序
-	order := req.Sort + " " + req.Order
-	if req.Sort != "title" && req.Sort != "author" && req.Sort != "upload_time" {
+	// 排序 - 使用安全的列名白名单防止SQL注入
+	var order string
+	validSortColumns := map[string]bool{"title": true, "author": true, "upload_time": true}
+	validOrders := map[string]bool{"ASC": true, "DESC": true, "asc": true, "desc": true}
+	
+	if validSortColumns[req.Sort] && validOrders[req.Order] {
+		order = req.Sort + " " + req.Order
+	} else {
 		order = "upload_time DESC"
 	}
 	
@@ -98,9 +103,14 @@ func (r *ArticleRepository) GetListWithAnalysis(req *model.PaginationRequest) (*
 		return nil, err
 	}
 	
-	// 排序
-	order := req.Sort + " " + req.Order
-	if req.Sort != "title" && req.Sort != "author" && req.Sort != "upload_time" {
+	// 排序 - 使用安全的列名白名单防止SQL注入
+	var order string
+	validSortColumns := map[string]bool{"title": true, "author": true, "upload_time": true}
+	validOrders := map[string]bool{"ASC": true, "DESC": true, "asc": true, "desc": true}
+	
+	if validSortColumns[req.Sort] && validOrders[req.Order] {
+		order = "a." + req.Sort + " " + req.Order
+	} else {
 		order = "a.upload_time DESC"
 	}
 	
