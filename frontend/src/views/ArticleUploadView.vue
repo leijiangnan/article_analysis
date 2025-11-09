@@ -84,7 +84,8 @@ const handleUploadError = (error: any) => {
 }
 
 .upload-section {
-  max-width: 800px;
+  max-width: 1600px;
   margin: 0 auto;
+  width: 100%;
 }
 </style>

@@ -67,7 +67,7 @@ const handleError: UploadProps['onError'] = (error) => {
 <style scoped>
 .upload-container {
   width: 100%;
-  max-width: 600px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
 }
