@@ -205,15 +205,13 @@ const formatDate = (dateString: string) => {
 const formatAnalysisText = (text: string) => {
   if (!text) return ''
   
-  // 检查是否是数字列表格式 (1. 2. 3. 或 1,2,3, 或 1；2；3；)
-  const numberListPattern = /\d+[,.]?\s+[^；;]*[；;]?/g
-  const hasNumberList = text.match(numberListPattern)
+  // 更智能的数字列表检测 - 匹配中文数字格式 (1. 2. 3. 等)
+  const chineseNumberPattern = /(?:^|\s)(\d+)[.、]\s*([^\d]+?)(?=\s*\d+[.、]|$)/g
+  const matches = text.match(chineseNumberPattern)
   
-  if (hasNumberList && hasNumberList.length > 1) {
-    // 将连续的数字列表分割并重新格式化
-    return text
-      .replace(/(\d+)[,.]?\s+([^；;]+)[；;]?/g, '$1. $2<br>')
-      .replace(/<br>$/, '') // 移除最后的<br>
+  if (matches && matches.length > 1) {
+    // 使用更精确的正则表达式重新格式化
+    return text.replace(/(\d+)[.、]\s*([^\d]+?)(?=\s*\d+[.、]|$)/g, '$1. $2<br>').replace(/<br>$/, '')
   }
   
   // 如果不是数字列表，保持原有格式（将换行转换为<br>）
