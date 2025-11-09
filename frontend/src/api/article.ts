@@ -37,5 +37,10 @@ export const articleApi = {
   // 获取作者列表
   getAuthors: () => {
     return api.get<ApiResponse<string[]>>('/articles/authors')
+  },
+
+  // 删除文章
+  deleteArticle: (id: number) => {
+    return api.delete<ApiResponse<null>>(`/articles/${id}`)
   }
 }

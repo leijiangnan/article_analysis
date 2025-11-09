@@ -48,7 +48,7 @@
           {{ formatDate(row.upload_time || row.created_at) }}
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="150" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="{ row }">
           <el-button
             type="primary"
@@ -63,6 +63,13 @@
             @click.stop="handleView(row.id)"
           >
             查看
+          </el-button>
+          <el-button
+            type="danger"
+            size="small"
+            @click.stop="handleDelete(row)"
+          >
+            删除
           </el-button>
         </template>
       </el-table-column>
@@ -89,7 +96,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { articleApi } from '@/api/article'
 import { analysisApi } from '@/api/analysis'
@@ -174,6 +181,29 @@ const handleAnalyze = async (id: number) => {
   } catch (error) {
     ElMessage.error('创建分析任务失败')
     console.error(error)
+  }
+}
+
+const handleDelete = async (row: Article) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除文章 "${row.title}" 吗？`,
+      '删除确认',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+
+    await articleApi.deleteArticle(row.id)
+    ElMessage.success('文章删除成功')
+    loadArticles() // 重新加载文章列表
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除文章失败')
+      console.error(error)
+    }
   }
 }
 
