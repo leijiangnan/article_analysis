@@ -36,7 +36,20 @@
       style="width: 100%"
       @row-click="handleRowClick"
     >
-      <el-table-column prop="title" label="标题" min-width="200" />
+      <el-table-column prop="title" label="标题" min-width="300">
+          <template #default="{ row }">
+            <el-tooltip 
+              :content="getCoreViewpoints(row)" 
+              placement="top"
+              :disabled="!hasAnalysis(row)"
+              :show-after="500"
+              :max-width="100"
+              effect="dark"
+            >
+              <span class="article-title">{{ row.title }}</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
       <el-table-column prop="author" label="作者" width="120" />
       <el-table-column prop="file_size" label="文件大小" width="100">
         <template #default="{ row }">
@@ -123,6 +136,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const totalSize = ref(0)
+const coreViewpointsCache = ref<Record<number, string>>({})
 
 const loadArticles = async () => {
   loading.value = true
@@ -234,6 +248,51 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
 }
 
+// 获取文章核心观点
+  const getCoreViewpoints = (row: Article) => {
+    if (row.analysis_status === 'completed' && row.has_analysis) {
+      // 检查缓存中是否有数据
+      if (coreViewpointsCache.value[row.id]) {
+        return coreViewpointsCache.value[row.id]
+      }
+      
+      // 异步加载核心观点数据
+      loadCoreViewpoints(row.id)
+      return '正在加载核心观点...'
+    } else if (row.analysis_status === 'processing') {
+      return '分析中，请稍候...'
+    } else if (row.analysis_status === 'failed') {
+      return '分析失败'
+    } else {
+      return '尚未分析'
+    }
+  }
+
+// 加载核心观点数据
+const loadCoreViewpoints = async (articleId: number) => {
+  // 避免重复加载
+  if (coreViewpointsCache.value[articleId]) {
+    return
+  }
+  
+  try {
+    const response = await analysisApi.getAnalysisResult(articleId)
+    if (response.data && response.data.core_viewpoints) {
+      coreViewpointsCache.value[articleId] = response.data.core_viewpoints
+    } else {
+      coreViewpointsCache.value[articleId] = '暂无核心观点数据'
+    }
+  } catch (error) {
+    console.error(`加载文章 ${articleId} 的核心观点失败:`, error)
+    coreViewpointsCache.value[articleId] = '加载核心观点失败'
+  }
+}
+
+// 检查是否有分析数据
+const hasAnalysis = (row: Article) => {
+  return row.has_analysis || false
+}
+
 // 获取分析状态标签类型
 const getAnalysisStatusType = (status: string) => {
   switch (status) {
@@ -310,5 +369,28 @@ onMounted(() => {
   font-size: 14px;
   color: #606266;
   z-index: 1000;
+}
+
+.article-title {
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.article-title:hover {
+  color: #409eff;
+}
+
+/* 自定义悬浮框样式 */
+:deep(.el-tooltip__popper) {
+  max-width: 100px !important;
+  line-height: 1.3 !important;
+  font-size: 12px !important;
+  padding: 6px 8px !important;
+  word-break: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+:deep(.el-tooltip__popper.is-dark) {
+  background-color: #303133 !important;
 }
 </style>
