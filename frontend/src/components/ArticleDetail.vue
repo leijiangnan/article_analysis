@@ -1,5 +1,6 @@
 <template>
-  <div class="article-detail">
+  <div class="article-detail-container">
+    <div class="article-detail">
     <el-card v-if="article" class="article-card">
       <template #header>
         <div class="card-header">
@@ -117,6 +118,7 @@
     <div v-if="loading" class="loading-container">
       <el-loading text="加载中..." />
     </div>
+    </div>
   </div>
 </template>
 
@@ -213,10 +215,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.article-detail {
-  padding: 20px;
+.article-detail-container {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.article-detail {
+  width: 100%;
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .article-card {
@@ -254,14 +264,18 @@ onMounted(() => {
 /* 并排布局样式 */
 .content-wrapper {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
   margin-top: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .content-card {
   height: fit-content;
   max-height: 80vh;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .article-content-card {
@@ -350,6 +364,35 @@ onMounted(() => {
   .content-text,
   .analysis-content {
     max-height: calc(60vh - 120px);
+  }
+}
+
+@media (max-width: 768px) {
+  .article-detail {
+    padding: 15px;
+    max-width: 100%;
+  }
+  
+  .content-wrapper {
+    gap: 10px;
+  }
+  
+  .content-card {
+    max-height: 50vh;
+  }
+  
+  .content-text,
+  .analysis-content {
+    max-height: calc(50vh - 100px);
+    padding: 10px;
+  }
+  
+  .viewpoints-text,
+  .structure-text,
+  .thoughts-text,
+  .materials-text {
+    max-height: 150px;
+    font-size: 13px;
   }
 }
 </style>
