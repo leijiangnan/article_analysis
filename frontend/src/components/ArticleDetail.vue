@@ -41,65 +41,78 @@
           </el-col>
         </el-row>
       </div>
+    </el-card>
 
-      <div class="article-content">
-        <h3>文章内容</h3>
+    <!-- 并排展示区域 -->
+    <div v-if="article" class="content-wrapper">
+      <!-- 文章内容区域 -->
+      <el-card class="content-card article-content-card">
+        <template #header>
+          <h3>文章内容</h3>
+        </template>
         <div class="content-text">
           {{ article.content }}
         </div>
-      </div>
-    </el-card>
+      </el-card>
 
-    <!-- 分析结果 -->
-    <el-card v-if="analysis" class="analysis-card">
-      <template #header>
-        <h3>分析结果</h3>
-      </template>
-
-      <div class="analysis-content">
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <div class="analysis-section">
-              <h4>核心观点</h4>
-              <div class="viewpoints-text">
-                {{ analysis.core_viewpoints }}
-              </div>
+      <!-- 分析结果区域 -->
+      <el-card v-if="analysis" class="content-card analysis-content-card">
+        <template #header>
+          <h3>分析结果</h3>
+        </template>
+        <div class="analysis-content">
+          <div class="analysis-section">
+            <h4>核心观点</h4>
+            <div class="viewpoints-text">
+              {{ analysis.core_viewpoints }}
             </div>
-          </el-col>
-          <el-col :span="12">
-            <div class="analysis-section">
-              <h4>文件结构</h4>
-              <div class="structure-text">
-                {{ analysis.file_structure }}
-              </div>
-            </div>
-          </el-col>
-        </el-row>
+          </div>
 
-        <div class="analysis-section">
-          <h4>作者思路</h4>
-          <div class="thoughts-text">
-            {{ analysis.author_thoughts }}
+          <div class="analysis-section">
+            <h4>文件结构</h4>
+            <div class="structure-text">
+              {{ analysis.file_structure }}
+            </div>
+          </div>
+
+          <div class="analysis-section">
+            <h4>作者思路</h4>
+            <div class="thoughts-text">
+              {{ analysis.author_thoughts }}
+            </div>
+          </div>
+
+          <div class="analysis-section">
+            <h4>相关材料</h4>
+            <div class="materials-text">
+              {{ analysis.related_materials }}
+            </div>
+          </div>
+
+          <div class="analysis-section" v-if="analysis.error_message">
+            <h4>错误信息</h4>
+            <el-alert
+              :title="analysis.error_message"
+              type="error"
+              :closable="false"
+            />
           </div>
         </div>
+      </el-card>
 
-        <div class="analysis-section">
-          <h4>相关材料</h4>
-          <div class="materials-text">
-            {{ analysis.related_materials }}
-          </div>
+      <!-- 无分析结果时的占位 -->
+      <el-card v-else class="content-card no-analysis-card">
+        <template #header>
+          <h3>分析结果</h3>
+        </template>
+        <div class="no-analysis-content">
+          <el-empty description="暂无分析结果" />
+          <el-button type="primary" @click="handleAnalyze" :loading="analyzing">
+            开始分析
+          </el-button>
         </div>
-
-        <div class="analysis-section" v-if="analysis.error_message">
-          <h4>错误信息</h4>
-          <el-alert
-            :title="analysis.error_message"
-            type="error"
-            :closable="false"
-          />
-        </div>
-      </div>
-    </el-card>
+      </el-card>
+    </div>
 
     <div v-if="loading" class="loading-container">
       <el-loading text="加载中..." />
@@ -202,7 +215,7 @@ onMounted(() => {
 <style scoped>
 .article-detail {
   padding: 20px;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
 }
 
@@ -238,22 +251,40 @@ onMounted(() => {
   color: #606266;
 }
 
-.article-content {
+/* 并排布局样式 */
+.content-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
   margin-top: 20px;
+}
+
+.content-card {
+  height: fit-content;
+  max-height: 80vh;
+}
+
+.article-content-card {
+  overflow: hidden;
+}
+
+.analysis-content-card {
+  overflow: hidden;
 }
 
 .content-text {
   white-space: pre-wrap;
   line-height: 1.6;
-  max-height: 400px;
-  overflow-y: auto;
   padding: 15px;
   background-color: #f8f9fa;
   border-radius: 4px;
+  max-height: calc(80vh - 120px);
+  overflow-y: auto;
 }
 
-.analysis-card {
-  margin-top: 20px;
+.analysis-content {
+  max-height: calc(80vh - 120px);
+  overflow-y: auto;
 }
 
 .analysis-section {
@@ -261,14 +292,9 @@ onMounted(() => {
 }
 
 .analysis-section h4 {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   color: #303133;
-}
-
-.info-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
+  font-size: 16px;
 }
 
 .viewpoints-text,
@@ -278,11 +304,29 @@ onMounted(() => {
   line-height: 1.6;
   color: #606266;
   background-color: #f8f9fa;
-  padding: 15px;
+  padding: 12px;
   border-radius: 4px;
   white-space: pre-wrap;
-  max-height: 300px;
+  max-height: 200px;
   overflow-y: auto;
+  font-size: 14px;
+}
+
+.no-analysis-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.no-analysis-content {
+  text-align: center;
+  padding: 40px;
+}
+
+.no-analysis-content .el-button {
+  margin-top: 20px;
 }
 
 .loading-container {
@@ -290,5 +334,22 @@ onMounted(() => {
   justify-content: center;
   align-items: center;
   height: 200px;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+  .content-wrapper {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .content-card {
+    max-height: 60vh;
+  }
+  
+  .content-text,
+  .analysis-content {
+    max-height: calc(60vh - 120px);
+  }
 }
 </style>
