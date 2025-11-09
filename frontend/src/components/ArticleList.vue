@@ -186,8 +186,13 @@ const handleView = (id: number) => {
 const handleAnalyze = async (id: number) => {
   try {
     await analysisApi.createAnalysis({ article_id: id })
-    ElMessage.success('分析任务已创建')
-    router.push(`/analysis/${id}`)
+    ElMessage.success('分析任务已创建，请稍候...')
+    
+    // 重新加载文章列表以更新分析状态
+    setTimeout(() => {
+      loadArticles()
+    }, 1000)
+    
   } catch (error) {
     ElMessage.error('创建分析任务失败')
     console.error(error)
