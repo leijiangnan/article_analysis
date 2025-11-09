@@ -1,0 +1,79 @@
+package config
+
+import (
+	"fmt"
+	"github.com/spf13/viper"
+)
+
+type Config struct {
+	Database DatabaseConfig `mapstructure:"database"`
+	Server   ServerConfig   `mapstructure:"server"`
+	OpenAI   OpenAIConfig   `mapstructure:"openai"`
+	Log      LogConfig      `mapstructure:"log"`
+}
+
+type DatabaseConfig struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	Database string `mapstructure:"database"`
+	Driver   string `mapstructure:"driver"`
+}
+
+type ServerConfig struct {
+	Port int    `mapstructure:"port"`
+	Mode string `mapstructure:"mode"`
+}
+
+type OpenAIConfig struct {
+	APIKey   string `mapstructure:"api_key"`
+	Model    string `mapstructure:"model"`
+	MaxTokens int   `mapstructure:"max_tokens"`
+}
+
+type LogConfig struct {
+	Level string `mapstructure:"level"`
+}
+
+func LoadConfig() (*Config, error) {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+	
+	// 设置默认值
+	viper.SetDefault("database.host", "localhost")
+	viper.SetDefault("database.port", 3306)
+	viper.SetDefault("database.username", "root")
+	viper.SetDefault("database.password", "password")
+	viper.SetDefault("database.database", "article_analysis")
+	viper.SetDefault("database.driver", "mysql")
+	
+	viper.SetDefault("server.port", 8080)
+	viper.SetDefault("server.mode", "debug")
+	
+	viper.SetDefault("openai.model", "gpt-3.5-turbo")
+	viper.SetDefault("openai.max_tokens", 2000)
+	
+	viper.SetDefault("log.level", "info")
+	
+	// 读取环境变量
+	viper.AutomaticEnv()
+	
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			// 配置文件不存在，使用默认值
+			fmt.Println("配置文件不存在，使用默认配置")
+		} else {
+			return nil, fmt.Errorf("读取配置文件失败: %w", err)
+		}
+	}
+	
+	var config Config
+	if err := viper.Unmarshal(&config); err != nil {
+		return nil, fmt.Errorf("解析配置失败: %w", err)
+	}
+	
+	return &config, nil
+}

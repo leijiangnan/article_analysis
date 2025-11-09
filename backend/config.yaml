@@ -1,0 +1,19 @@
+database:
+  host: localhost
+  port: 3306
+  username: root
+  password: password
+  database: article_analysis
+  driver: sqlite # 使用SQLite作为替代方案
+
+server:
+  port: 8080
+  mode: debug
+
+openai:
+  api_key: your_openai_api_key_here
+  model: gpt-3.5-turbo
+  max_tokens: 2000
+
+log:
+  level: info
