@@ -60,49 +60,43 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <div class="analysis-section">
-              <h4>基本信息</h4>
-              <div class="info-grid">
-                <div class="info-item">
-                  <label>分类：</label>
-                  <el-tag>{{ analysis.category }}</el-tag>
-                </div>
-                <div class="info-item">
-                  <label>情感倾向：</label>
-                  <el-tag :type="getSentimentType(analysis.sentiment)">
-                    {{ analysis.sentiment }}
-                  </el-tag>
-                </div>
-                <div class="info-item">
-                  <label>字数：</label>
-                  <span>{{ analysis.word_count }}</span>
-                </div>
-                <div class="info-item">
-                  <label>预计阅读时间：</label>
-                  <span>{{ analysis.reading_time }} 分钟</span>
-                </div>
+              <h4>核心观点</h4>
+              <div class="viewpoints-text">
+                {{ analysis.core_viewpoints }}
               </div>
             </div>
           </el-col>
           <el-col :span="12">
             <div class="analysis-section">
-              <h4>文章摘要</h4>
-              <div class="summary-text">
-                {{ analysis.summary }}
+              <h4>文件结构</h4>
+              <div class="structure-text">
+                {{ analysis.file_structure }}
               </div>
             </div>
           </el-col>
         </el-row>
 
         <div class="analysis-section">
-          <h4>关键要点</h4>
-          <el-tag
-            v-for="(point, index) in analysis.key_points"
-            :key="index"
-            type="info"
-            class="key-point-tag"
-          >
-            {{ point }}
-          </el-tag>
+          <h4>作者思路</h4>
+          <div class="thoughts-text">
+            {{ analysis.author_thoughts }}
+          </div>
+        </div>
+
+        <div class="analysis-section">
+          <h4>相关材料</h4>
+          <div class="materials-text">
+            {{ analysis.related_materials }}
+          </div>
+        </div>
+
+        <div class="analysis-section" v-if="analysis.error_message">
+          <h4>错误信息</h4>
+          <el-alert
+            :title="analysis.error_message"
+            type="error"
+            :closable="false"
+          />
         </div>
       </div>
     </el-card>
@@ -197,14 +191,7 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
 }
 
-const getSentimentType = (sentiment: string) => {
-  const typeMap: Record<string, string> = {
-    'positive': 'success',
-    'negative': 'danger',
-    'neutral': 'info'
-  }
-  return typeMap[sentiment] || 'info'
-}
+
 
 onMounted(() => {
   loadArticle()
@@ -284,17 +271,18 @@ onMounted(() => {
   gap: 15px;
 }
 
-.summary-text {
+.viewpoints-text,
+.structure-text,
+.thoughts-text,
+.materials-text {
   line-height: 1.6;
   color: #606266;
   background-color: #f8f9fa;
   padding: 15px;
   border-radius: 4px;
-}
-
-.key-point-tag {
-  margin-right: 8px;
-  margin-bottom: 8px;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .loading-container {

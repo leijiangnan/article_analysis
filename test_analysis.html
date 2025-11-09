@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分析结果测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+        .section h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .content {
+            line-height: 1.6;
+            color: #666;
+            white-space: pre-wrap;
+        }
+        .error {
+            color: red;
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .loading {
+            text-align: center;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>文章分析结果</h1>
+        <div id="result">
+            <div class="loading">正在加载分析结果...</div>
+        </div>
+    </div>
+
+    <script>
+        async function loadAnalysis() {
+            try {
+                const response = await fetch('http://localhost:8080/api/v1/articles/1/analysis');
+                const result = await response.json();
+                
+                if (result.code === 200 && result.data) {
+                    const data = result.data;
+                    displayResult(data);
+                } else {
+                    document.getElementById('result').innerHTML = '<div class="error">获取分析结果失败: ' + result.message + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = '<div class="error">网络请求失败: ' + error.message + '</div>';
+            }
+        }
+
+        function displayResult(data) {
+            const html = `
+                <div class="section">
+                    <h3>文章信息</h3>
+                    <div class="content">
+                        <strong>标题:</strong> ${escapeHtml(data.article.title)}<br>
+                        <strong>作者:</strong> ${escapeHtml(data.article.author)}<br>
+                        <strong>文件大小:</strong> ${formatFileSize(data.article.file_size)}<br>
+                        <strong>上传时间:</strong> ${formatDate(data.article.created_at)}
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>核心观点</h3>
+                    <div class="content">${escapeHtml(data.core_viewpoints)}</div>
+                </div>
+                
+                <div class="section">
+                    <h3>文件结构</h3>
+                    <div class="content">${escapeHtml(data.file_structure)}</div>
+                </div>
+                
+                <div class="section">
+                    <h3>作者思路</h3>
+                    <div class="content">${escapeHtml(data.author_thoughts)}</div>
+                </div>
+                
+                <div class="section">
+                    <h3>相关材料</h3>
+                    <div class="content">${escapeHtml(data.related_materials)}</div>
+                </div>
+                
+                <div class="section">
+                    <h3>分析状态</h3>
+                    <div class="content">状态: ${data.analysis_status}</div>
+                    ${data.error_message ? '<div class="error">错误: ' + escapeHtml(data.error_message) + '</div>' : ''}
+                </div>
+            `;
+            document.getElementById('result').innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDate(dateString) {
+            return new Date(dateString).toLocaleString('zh-CN');
+        }
+
+        // 页面加载完成后自动获取数据
+        window.addEventListener('load', loadAnalysis);
+    </script>
+</body>
+</html>

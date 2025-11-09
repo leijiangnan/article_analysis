@@ -21,7 +21,7 @@ func (r *AnalysisRepository) Create(analysis *model.ArticleAnalysis) error {
 
 func (r *AnalysisRepository) GetByArticleID(articleID uint64) (*model.ArticleAnalysis, error) {
 	var analysis model.ArticleAnalysis
-	err := r.db.Where("article_id = ?", articleID).First(&analysis).Error
+	err := r.db.Preload("Article").Where("article_id = ?", articleID).First(&analysis).Error
 	if err != nil {
 		return nil, err
 	}

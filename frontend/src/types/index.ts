@@ -12,14 +12,16 @@ export interface Article {
 export interface ArticleAnalysis {
   id: number
   article_id: number
-  summary: string
-  key_points: string[]
-  sentiment: string
-  category: string
-  word_count: number
-  reading_time: number
+  core_viewpoints: string
+  file_structure: string
+  author_thoughts: string
+  related_materials: string
+  analysis_status: string
+  analysis_time?: string
+  error_message: string
   created_at: string
   updated_at: string
+  article?: Article
 }
 
 export interface PaginationRequest {

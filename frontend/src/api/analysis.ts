@@ -8,12 +8,12 @@ export interface CreateAnalysisRequest {
 export const analysisApi = {
   // 创建分析任务
   createAnalysis: (data: CreateAnalysisRequest) => {
-    return api.post<ApiResponse<{ task_id: string }>>('/analysis/analyze', data)
+    return api.post<ApiResponse<{ task_id: string }>>(`/articles/${data.article_id}/analyze`, {})
   },
 
   // 获取分析结果
   getAnalysisResult: (articleId: number) => {
-    return api.get<ApiResponse<ArticleAnalysis>>(`/analysis/result/${articleId}`)
+    return api.get<ApiResponse<ArticleAnalysis>>(`/articles/${articleId}/analysis`)
   },
 
   // 获取分析状态

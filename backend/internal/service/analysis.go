@@ -52,7 +52,7 @@ func (s *AnalysisService) AnalyzeArticle(articleID uint64) (*AnalysisTask, error
 	taskID := fmt.Sprintf("task_%d_%d", articleID, time.Now().Unix())
 	analysis := &model.ArticleAnalysis{
 		ArticleID:      articleID,
-		AnalysisStatus: "pending",
+		AnalysisStatus: "processing", // 直接设置为处理中
 	}
 	
 	if existingAnalysis == nil {
@@ -61,7 +61,7 @@ func (s *AnalysisService) AnalyzeArticle(articleID uint64) (*AnalysisTask, error
 		}
 	} else {
 		analysis = existingAnalysis
-		analysis.AnalysisStatus = "pending"
+		analysis.AnalysisStatus = "processing"
 		analysis.ErrorMessage = ""
 		if err := s.analysisRepo.Update(analysis); err != nil {
 			return nil, errors.New("更新分析任务失败")
@@ -125,15 +125,45 @@ func (s *AnalysisService) GetAnalysisResult(articleID uint64) (*model.ArticleAna
 }
 
 func (s *AnalysisService) GetAnalysisStatus(taskID string) (map[string]interface{}, error) {
-	// 简单的状态查询，实际项目中可以使用Redis等存储任务状态
+	// 从任务ID中提取文章ID
+	var articleID uint64
+	fmt.Sscanf(taskID, "task_%d_", &articleID)
+	
+	if articleID == 0 {
+		return nil, errors.New("无效的任务ID")
+	}
+	
+	// 查询数据库获取实际状态
+	analysis, err := s.analysisRepo.GetByArticleID(articleID)
+	if err != nil {
+		return map[string]interface{}{
+			"task_id":  taskID,
+			"status":   "pending",
+			"progress": 0,
+		}, nil
+	}
+	
+	progress := 0
+	switch analysis.AnalysisStatus {
+	case "completed":
+		progress = 100
+	case "processing":
+		progress = 50
+	case "failed":
+		progress = 0
+	default:
+		progress = 0
+	}
+	
 	return map[string]interface{}{
-		"task_id": taskID,
-		"status":  "completed", // 简化处理
-		"progress": 100,
+		"task_id":  taskID,
+		"status":   analysis.AnalysisStatus,
+		"progress": progress,
+		"error":    analysis.ErrorMessage,
 	}, nil
 }
 
 func timeoutContext() context.Context {
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, _ := context.WithTimeout(context.Background(), 120*time.Second)
 	return ctx
 }
