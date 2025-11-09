@@ -190,6 +190,8 @@ onMounted(() => {
 <style scoped>
 .article-list {
   padding: 20px;
+  width: 100%;
+  max-width: 1400px;
 }
 
 .header {

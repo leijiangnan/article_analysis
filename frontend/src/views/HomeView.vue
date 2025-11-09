@@ -23,26 +23,28 @@
             <template #header>
               <h2>欢迎使用文章分析系统</h2>
             </template>
-            <div class="feature-list">
-              <div class="feature-item">
-                <el-icon><upload-filled /></el-icon>
-                <div class="feature-content">
-                  <h3>文件上传</h3>
-                  <p>支持上传 txt、pdf、doc、docx 格式的文章文件</p>
-                </div>
+            <div class="hero-section">
+              <div class="hero-image">
+                <img src="@/assets/analysis-illustration.svg" alt="文档分析插图" class="analysis-illustration"/>
               </div>
-              <div class="feature-item">
-                <el-icon><search /></el-icon>
-                <div class="feature-content">
-                  <h3>智能分析</h3>
-                  <p>基于 AI 技术对文章进行深度分析，提取关键信息</p>
-                </div>
-              </div>
-              <div class="feature-item">
-                <el-icon><trend-charts /></el-icon>
-                <div class="feature-content">
-                  <h3>分析结果</h3>
-                  <p>提供文章摘要、关键要点、情感分析等详细报告</p>
+              <div class="hero-description">
+                <p class="description-text">
+                  智能文档分析平台，帮助您快速处理和分析各类文章文件。
+                  支持多种格式上传，AI智能分析，一键生成详细报告。
+                </p>
+                <div class="hero-stats">
+                  <div class="stat-item">
+                    <div class="stat-number">50+</div>
+                    <div class="stat-label">支持格式</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">AI</div>
+                    <div class="stat-label">智能分析</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-number">秒级</div>
+                    <div class="stat-label">响应速度</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -54,19 +56,25 @@
 </template>
 
 <script setup lang="ts">
-import { UploadFilled, Document, Search, TrendCharts } from '@element-plus/icons-vue'
+import { UploadFilled, Document } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>
 .home {
   min-height: 100vh;
-  background-color: #f5f7fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .el-header {
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
   padding: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .header-content {
@@ -89,60 +97,145 @@ import { UploadFilled, Document, Search, TrendCharts } from '@element-plus/icons
 }
 
 .el-main {
-  padding: 40px 20px;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .welcome-section {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 1600px;
   margin: 0 auto;
+  padding: 20px 40px;
 }
 
 .welcome-card {
   text-align: center;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
 }
 
 .welcome-card h2 {
   margin: 0;
-  color: #303133;
-  font-size: 28px;
-}
-
-.feature-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 30px;
-  margin-top: 40px;
-}
-
-.feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  transition: transform 0.2s;
-}
-
-.feature-item:hover {
-  transform: translateY(-2px);
-}
-
-.feature-item .el-icon {
+  color: #2c3e50;
   font-size: 32px;
-  color: #409eff;
-  margin-top: 5px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.feature-content h3 {
-  margin: 0 0 10px 0;
-  color: #303133;
-  font-size: 18px;
+.hero-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 80px;
+  padding: 80px 60px;
+  min-height: 600px;
+  max-width: 100%;
 }
 
-.feature-content p {
-  margin: 0;
-  color: #606266;
-  line-height: 1.5;
+.hero-image {
+  flex: 1.5;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 400px;
+}
+
+.analysis-illustration {
+  max-width: 100%;
+  height: auto;
+  max-height: 500px;
+  width: auto;
+  max-width: 600px;
+  filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.2));
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.analysis-illustration:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.15));
+}
+
+.hero-description {
+  flex: 2;
+  text-align: left;
+  min-width: 400px;
+}
+
+.description-text {
+  font-size: 24px;
+  line-height: 1.7;
+  color: #4a5568;
+  margin-bottom: 60px;
+  text-align: center;
+  font-weight: 400;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-stats {
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+  margin-top: 20px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 30px 25px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease;
+  min-width: 120px;
+}
+
+.stat-item:hover {
+  transform: translateY(-5px);
+}
+
+.stat-number {
+  font-size: 42px;
+  font-weight: bold;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.stat-label {
+  font-size: 16px;
+  opacity: 0.9;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    flex-direction: column;
+    gap: 30px;
+  }
+  
+  .hero-stats {
+    gap: 20px;
+  }
+  
+  .stat-item {
+    padding: 15px;
+  }
+  
+  .stat-number {
+    font-size: 24px;
+  }
 }
 </style>

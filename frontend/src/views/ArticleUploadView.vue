@@ -50,6 +50,11 @@ const handleUploadError = (error: any) => {
 .article-upload {
   min-height: 100vh;
   background-color: #f5f7fa;
+  width: 100%;
+}
+
+.el-container {
+  width: 100%;
 }
 
 .el-header {
@@ -74,6 +79,8 @@ const handleUploadError = (error: any) => {
 
 .el-main {
   padding: 40px 20px;
+  display: flex;
+  justify-content: center;
 }
 
 .upload-section {

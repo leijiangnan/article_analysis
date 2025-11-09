@@ -62,5 +62,6 @@ import ArticleDetail from '@/components/ArticleDetail.vue'
 
 .el-main {
   padding: 20px;
+  align-self: center;
 }
 </style>

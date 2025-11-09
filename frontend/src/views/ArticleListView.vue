@@ -33,6 +33,11 @@ import ArticleList from '@/components/ArticleList.vue'
 .article-list-view {
   min-height: 100vh;
   background-color: #f5f7fa;
+  width: 100%;
+}
+
+.el-container {
+  width: 100%;
 }
 
 .el-header {
@@ -62,5 +67,7 @@ import ArticleList from '@/components/ArticleList.vue'
 
 .el-main {
   padding: 20px;
+  display: flex;
+  justify-content: center;
 }
 </style>
