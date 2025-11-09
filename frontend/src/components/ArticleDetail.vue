@@ -64,29 +64,25 @@
         <div class="analysis-content">
           <div class="analysis-section">
             <h4>核心观点</h4>
-            <div class="viewpoints-text">
-              {{ analysis.core_viewpoints }}
+            <div class="viewpoints-text" v-html="formatAnalysisText(analysis.core_viewpoints)">
             </div>
           </div>
 
           <div class="analysis-section">
             <h4>文件结构</h4>
-            <div class="structure-text">
-              {{ analysis.file_structure }}
+            <div class="structure-text" v-html="formatAnalysisText(analysis.file_structure)">
             </div>
           </div>
 
           <div class="analysis-section">
             <h4>作者思路</h4>
-            <div class="thoughts-text">
-              {{ analysis.author_thoughts }}
+            <div class="thoughts-text" v-html="formatAnalysisText(analysis.author_thoughts)">
             </div>
           </div>
 
           <div class="analysis-section">
             <h4>相关材料</h4>
-            <div class="materials-text">
-              {{ analysis.related_materials }}
+            <div class="materials-text" v-html="formatAnalysisText(analysis.related_materials)">
             </div>
           </div>
 
@@ -204,6 +200,24 @@ const formatFileSize = (bytes: number) => {
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('zh-CN')
+}
+
+const formatAnalysisText = (text: string) => {
+  if (!text) return ''
+  
+  // 检查是否是数字列表格式 (1. 2. 3. 或 1,2,3, 或 1；2；3；)
+  const numberListPattern = /\d+[,.]?\s+[^；;]*[；;]?/g
+  const hasNumberList = text.match(numberListPattern)
+  
+  if (hasNumberList && hasNumberList.length > 1) {
+    // 将连续的数字列表分割并重新格式化
+    return text
+      .replace(/(\d+)[,.]?\s+([^；;]+)[；;]?/g, '$1. $2<br>')
+      .replace(/<br>$/, '') // 移除最后的<br>
+  }
+  
+  // 如果不是数字列表，保持原有格式（将换行转换为<br>）
+  return text.replace(/\n/g, '<br>')
 }
 
 
