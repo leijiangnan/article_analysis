@@ -18,7 +18,9 @@
       </el-header>
       
       <el-main>
-        <ArticleList />
+        <div class="content-section">
+          <ArticleList />
+        </div>
       </el-main>
     </el-container>
   </div>
@@ -66,8 +68,19 @@ import ArticleList from '@/components/ArticleList.vue'
 }
 
 .el-main {
-  padding: 20px;
+  padding: 0;
+  flex: 1;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.content-section {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 20px 40px;
+  box-sizing: border-box;
 }
 </style>

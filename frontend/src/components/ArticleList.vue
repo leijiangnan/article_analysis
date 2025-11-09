@@ -79,6 +79,10 @@
         @current-change="handleCurrentChange"
       />
     </div>
+    
+    <div class="total-size" v-if="totalSize > 0">
+      总文件大小: {{ formatFileSize(totalSize) }}
+    </div>
   </div>
 </template>
 
@@ -101,6 +105,7 @@ const selectedAuthor = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const totalSize = ref(0)
 
 const loadArticles = async () => {
   loading.value = true
@@ -113,6 +118,9 @@ const loadArticles = async () => {
     })
     articles.value = response.data.list || []
     total.value = response.data.total || 0
+    
+    // 计算总文件大小
+    totalSize.value = articles.value.reduce((sum, article) => sum + (article.file_size || 0), 0)
   } catch (error) {
     ElMessage.error('加载文章列表失败')
     console.error(error)
@@ -189,9 +197,8 @@ onMounted(() => {
 
 <style scoped>
 .article-list {
-  padding: 20px;
   width: 100%;
-  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .header {
@@ -199,6 +206,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  background-color: #fff;
+  padding: 0 0 20px;
 }
 
 .filters {
@@ -207,8 +216,22 @@ onMounted(() => {
 }
 
 .pagination {
-  margin-top: 20px;
+  margin-top: 0;
   display: flex;
   justify-content: center;
+  background-color: #fff;
+}
+
+.total-size {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: #f5f7fa;
+  padding: 10px 15px;
+  border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  color: #606266;
+  z-index: 1000;
 }
 </style>
