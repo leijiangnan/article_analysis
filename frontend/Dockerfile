@@ -1,26 +1,8 @@
-# 构建阶段
-FROM node:20 AS builder
-
-# 设置工作目录
-WORKDIR /app
-
-# 复制package文件
-COPY package*.json ./
-
-# 安装依赖（包含开发依赖用于构建）
-RUN npm ci
-
-# 复制源代码
-COPY . .
-
-# 构建应用
-RUN npm run build
-
-# 生产阶段
+# 直接使用nginx作为基础镜像
 FROM nginx
 
-# 复制构建产物到nginx目录
-COPY --from=builder /app/dist /usr/share/nginx/html
+# 复制本地构建产物到nginx目录（会通过docker-compose的volumes挂载或build context提供）
+COPY dist /usr/share/nginx/html
 
 # 复制nginx配置文件
 COPY nginx.conf /etc/nginx/nginx.conf

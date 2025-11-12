@@ -15,6 +15,7 @@ services:
     volumes:
       - backend_data:/app/data
       - ./backend/config.yaml:/app/config.yaml:ro
+      - ./backend/main:/app/main:ro  # 挂载本机构建的二进制文件
     networks:
       - app-network
     restart: unless-stopped
@@ -39,6 +40,8 @@ services:
         condition: service_healthy
     environment:
       - VITE_API_BASE_URL=http://backend:8080/api
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro  # 挂载本机构建的dist目录
     networks:
       - app-network
     restart: unless-stopped
