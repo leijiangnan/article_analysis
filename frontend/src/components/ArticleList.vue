@@ -147,8 +147,8 @@ const loadArticles = async () => {
       keyword: searchQuery.value || undefined,
       author: selectedAuthor.value || undefined
     })
-    articles.value = response.data.list || []
-    total.value = response.data.total || 0
+    articles.value = (response.data as any).list || []
+    total.value = (response.data as any).total || 0
     
     // 计算总文件大小
     totalSize.value = articles.value.reduce((sum, article) => sum + (article.file_size || 0), 0)
@@ -163,7 +163,7 @@ const loadArticles = async () => {
 const loadAuthors = async () => {
   try {
     const response = await articleApi.getAuthors()
-    authors.value = response.data
+    authors.value = response.data as any
   } catch (error) {
     console.error('加载作者列表失败', error)
   }
@@ -277,8 +277,8 @@ const loadCoreViewpoints = async (articleId: number) => {
   
   try {
     const response = await analysisApi.getAnalysisResult(articleId)
-    if (response.data && response.data.core_viewpoints) {
-      coreViewpointsCache.value[articleId] = response.data.core_viewpoints
+    if (response.data && (response.data as any).core_viewpoints) {
+      coreViewpointsCache.value[articleId] = (response.data as any).core_viewpoints
     } else {
       coreViewpointsCache.value[articleId] = '暂无核心观点数据'
     }

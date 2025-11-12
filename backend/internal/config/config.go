@@ -37,10 +37,21 @@ type LogConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./config")
+	// 首先检查是否通过环境变量指定了配置文件路径
+	configPath := viper.GetString("CONFIG_PATH")
+	if configPath != "" {
+		viper.SetConfigFile(configPath)
+	} else {
+		// 使用默认的配置文件名和搜索路径
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
+		viper.AddConfigPath(".")
+		viper.AddConfigPath("./config")
+	}
+	
+	// 确保也能从环境变量读取配置路径
+	viper.AutomaticEnv()
+	viper.BindEnv("CONFIG_PATH")
 	
 	// 设置默认值
 	viper.SetDefault("database.host", "localhost")

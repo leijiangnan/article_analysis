@@ -1,0 +1,81 @@
+services:
+  # 后端API服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: article-analysis-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=release
+      - DB_PATH=/app/data/article_analysis.db
+      - LOG_LEVEL=info
+      - CONFIG_PATH=/app/config.yaml
+    volumes:
+      - backend_data:/app/data
+      - ./backend/config.yaml:/app/config.yaml:ro
+    networks:
+      - app-network
+    restart: unless-stopped
+    user: root
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: article-analysis-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      - VITE_API_BASE_URL=http://backend:8080/api
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 数据库服务（可选，用于生产环境）
+  # 如果使用SQLite，可以注释掉此服务
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: article-analysis-db
+  #   environment:
+  #     POSTGRES_DB: article_analysis
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: password
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #     - ./backend/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - app-network
+  #   restart: unless-stopped
+
+volumes:
+  backend_data:
+    driver: local
+  # postgres_data:
+  #   driver: local
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

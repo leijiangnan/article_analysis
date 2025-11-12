@@ -1,10 +1,6 @@
 database:
-  host: localhost
-  port: 3306
-  username: root
-  password: password
-  database: article_analysis
   driver: sqlite # 使用SQLite作为替代方案
+  database: /root/data/article_analysis.db # SQLite数据库文件路径
 
 server:
   port: 8080

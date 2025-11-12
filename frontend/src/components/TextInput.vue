@@ -141,20 +141,14 @@ const handleSubmit = async () => {
       
       // 检查响应数据结构 - 响应拦截器已经返回了response.data
       if (response) {
-        console.log('响应数据code:', response.code)
-        console.log('响应数据message:', response.message)
-        console.log('响应数据data:', response.data)
+        console.log('响应数据:', response)
         
-        if (response.code === 200) {
-          console.log('文章创建成功，响应数据:', response)
-          // 不再显示成功消息，由父组件处理
-          emit('createSuccess', response.data)
-          // 重置表单
-          handleReset()
-        } else {
-          console.log('文章创建失败，响应数据:', response)
-          throw new Error(response.message || '创建失败')
-        }
+        // 直接处理响应数据
+        console.log('文章创建成功，响应数据:', response)
+        // 不再显示成功消息，由父组件处理
+        emit('createSuccess', response)
+        // 重置表单
+        handleReset()
       } else {
         console.log('响应数据格式错误:', response)
         throw new Error('服务器响应格式错误')
@@ -196,8 +190,6 @@ const testApi = async () => {
       content: '这是一个API测试文章内容。'
     })
     console.log('API测试成功:', response)
-    console.log('测试响应code:', response.code)
-    console.log('测试响应message:', response.message)
     ElMessage.success('API连接测试成功！')
   } catch (error: any) {
     console.error('API测试失败:', error)

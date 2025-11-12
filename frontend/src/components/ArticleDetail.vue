@@ -140,7 +140,7 @@ const loadArticle = async () => {
   loading.value = true
   try {
     const response = await articleApi.getArticleDetail(articleId)
-    article.value = response.data
+    article.value = response.data as any
   } catch (error) {
     ElMessage.error('加载文章失败')
     console.error(error)
@@ -152,7 +152,7 @@ const loadArticle = async () => {
 const loadAnalysis = async () => {
   try {
     const response = await analysisApi.getAnalysisResult(articleId)
-    analysis.value = response.data
+    analysis.value = response.data as any
   } catch (error) {
     // 分析结果不存在是正常的，不显示错误
     console.log('分析结果不存在')
@@ -169,7 +169,7 @@ const handleAnalyze = async () => {
     const checkStatus = async () => {
       try {
         const response = await analysisApi.getAnalysisResult(articleId)
-        analysis.value = response.data
+        analysis.value = response.data as any
         ElMessage.success('分析完成！')
       } catch (error) {
         // 如果分析还未完成，继续轮询

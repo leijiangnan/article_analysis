@@ -110,11 +110,19 @@ func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handle
 	router.Use(gin.Recovery())
 	router.Use(middleware.CORS())
 
+	// 健康检查端点
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status": "ok",
+			"service": "article-analysis-backend",
+		})
+	})
+
 	// 静态文件服务
 	router.Static("/uploads", "./web/uploads")
 
 	// API路由组
-	api := router.Group("/api/v1")
+	api := router.Group("/api")
 	{
 		// 文章相关路由
 		articles := api.Group("/articles")
