@@ -136,7 +136,7 @@ const currentPage = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const totalSize = ref(0)
-const coreViewpointsCache = ref<Record<number, string>>({})
+const coreViewpointsCache = ref<Record<string, string>>({})
 
 const loadArticles = async () => {
   loading.value = true
@@ -193,11 +193,11 @@ const handleRowClick = (row: Article) => {
   router.push(`/articles/${row.id}`)
 }
 
-const handleView = (id: number) => {
+const handleView = (id: string) => {
   router.push(`/articles/${id}`)
 }
 
-const handleAnalyze = async (id: number) => {
+const handleAnalyze = async (id: string) => {
   try {
     await analysisApi.createAnalysis({ article_id: id })
     ElMessage.success('分析任务已创建，请稍候...')
@@ -269,7 +269,7 @@ const formatDate = (dateString: string) => {
   }
 
 // 加载核心观点数据
-const loadCoreViewpoints = async (articleId: number) => {
+const loadCoreViewpoints = async (articleId: string) => {
   // 避免重复加载
   if (coreViewpointsCache.value[articleId]) {
     return

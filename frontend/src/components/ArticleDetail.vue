@@ -134,7 +134,7 @@ const analyzing = ref(false)
 const article = ref<Article | null>(null)
 const analysis = ref<ArticleAnalysis | null>(null)
 
-const articleId = Number(route.params.id)
+const articleId = route.params.id as string
 
 const loadArticle = async () => {
   loading.value = true

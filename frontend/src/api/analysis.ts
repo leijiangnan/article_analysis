@@ -2,7 +2,7 @@ import api from '@/api/request'
 import type { ArticleAnalysis, ApiResponse } from '@/types'
 
 export interface CreateAnalysisRequest {
-  article_id: number
+  article_id: string
 }
 
 export const analysisApi = {
@@ -12,7 +12,7 @@ export const analysisApi = {
   },
 
   // 获取分析结果
-  getAnalysisResult: (articleId: number) => {
+  getAnalysisResult: (articleId: string) => {
     return api.get<ApiResponse<ArticleAnalysis>>(`/articles/${articleId}/analysis`)
   },
 

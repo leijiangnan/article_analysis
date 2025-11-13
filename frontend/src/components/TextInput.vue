@@ -144,9 +144,9 @@ const handleSubmit = async () => {
         console.log('响应数据:', response)
         
         // 直接处理响应数据
-        console.log('文章创建成功，响应数据:', response)
+        console.log('文章创建成功，响应数据:', response.data)
         // 不再显示成功消息，由父组件处理
-        emit('createSuccess', response)
+        emit('createSuccess', response.data)
         // 重置表单
         handleReset()
       } else {

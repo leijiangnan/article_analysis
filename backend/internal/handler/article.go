@@ -49,7 +49,7 @@ func (h *ArticleHandler) UploadArticle(c *gin.Context) {
 		Code:    200,
 		Message: "上传成功",
 		Data: map[string]interface{}{
-			"id":          article.ID,
+			"id":          strconv.FormatUint(article.ID, 10),
 			"title":       article.Title,
 			"author":      article.Author,
 			"upload_time": article.UploadTime.Format("2006-01-02 15:04:05"),
@@ -210,7 +210,7 @@ func (h *ArticleHandler) CreateArticle(c *gin.Context) {
 		Code:    200,
 		Message: "创建成功",
 		Data: map[string]interface{}{
-			"id":          article.ID,
+			"id":          strconv.FormatUint(article.ID, 10),
 			"title":       article.Title,
 			"author":      article.Author,
 			"upload_time": article.UploadTime.Format("2006-01-02 15:04:05"),

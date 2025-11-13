@@ -13,7 +13,7 @@ services:
       - LOG_LEVEL=info
       - CONFIG_PATH=/app/config.yaml
     volumes:
-      - backend_data:/app/data
+      - ./backend/data:/app/data
       - ./backend/config.yaml:/app/config.yaml:ro
       - ./backend/main:/app/main:ro  # 挂载本机构建的二进制文件
     networks:
@@ -69,12 +69,6 @@ services:
   #   networks:
   #     - app-network
   #   restart: unless-stopped
-
-volumes:
-  backend_data:
-    driver: local
-  # postgres_data:
-  #   driver: local
 
 networks:
   app-network:

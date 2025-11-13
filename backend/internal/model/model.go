@@ -5,7 +5,7 @@ import (
 )
 
 type Article struct {
-	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id"`
+	ID         uint64    `gorm:"primaryKey;autoIncrement" json:"id,string"`
 	Title      string    `gorm:"type:varchar(500);not null" json:"title"`
 	Author     string    `gorm:"type:varchar(200);not null;index" json:"author"`
 	Content    string    `gorm:"type:text;not null" json:"content"`

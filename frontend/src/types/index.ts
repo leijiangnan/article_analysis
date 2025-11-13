@@ -1,5 +1,5 @@
 export interface Article {
-  id: number
+  id: string
   title: string
   author: string
   content: string
@@ -12,8 +12,8 @@ export interface Article {
 }
 
 export interface ArticleAnalysis {
-  id: number
-  article_id: number
+  id: string
+  article_id: string
   core_viewpoints: string
   file_structure: string
   author_thoughts: string

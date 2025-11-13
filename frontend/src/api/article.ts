@@ -46,7 +46,7 @@ export const articleApi = {
   },
 
   // 获取文章详情
-  getArticleDetail: (id: number) => {
+  getArticleDetail: (id: string) => {
     return api.get<ApiResponse<Article>>(`/articles/${id}`)
   },
 
@@ -56,7 +56,7 @@ export const articleApi = {
   },
 
   // 删除文章
-  deleteArticle: (id: number) => {
+  deleteArticle: (id: string) => {
     return api.delete<ApiResponse<null>>(`/articles/${id}`)
   }
 }
