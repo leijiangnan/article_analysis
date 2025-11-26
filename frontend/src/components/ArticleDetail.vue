@@ -13,6 +13,9 @@
             >
               分析文章
             </el-button>
+            <el-button type="success" @click="goToUpload">
+              上传文章
+            </el-button>
             <el-button @click="goBack">
               返回列表
             </el-button>
@@ -188,6 +191,10 @@ const handleAnalyze = async () => {
 
 const goBack = () => {
   router.push('/articles')
+}
+
+const goToUpload = () => {
+  router.push('/articles/upload')
 }
 
 const formatFileSize = (bytes: number) => {

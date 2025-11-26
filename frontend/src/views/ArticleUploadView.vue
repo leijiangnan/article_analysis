@@ -50,7 +50,7 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const activeTab = ref('file')
+const activeTab = ref('text')
 
 const handleUploadSuccess = (data: any) => {
   ElMessage.success('文件上传成功！')
