@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+
 	"github.com/spf13/viper"
 )
 
@@ -27,9 +28,9 @@ type ServerConfig struct {
 }
 
 type OpenAIConfig struct {
-	APIKey   string `mapstructure:"api_key"`
-	APIBase  string `mapstructure:"api_base"`
-	Model    string `mapstructure:"model"`
+	APIKey  string `mapstructure:"api_key"`
+	APIBase string `mapstructure:"api_base"`
+	Model   string `mapstructure:"model"`
 }
 
 type LogConfig struct {
@@ -48,11 +49,11 @@ func LoadConfig() (*Config, error) {
 		viper.AddConfigPath(".")
 		viper.AddConfigPath("./config")
 	}
-	
+
 	// 确保也能从环境变量读取配置路径
 	viper.AutomaticEnv()
 	viper.BindEnv("CONFIG_PATH")
-	
+
 	// 设置默认值
 	viper.SetDefault("database.host", "localhost")
 	viper.SetDefault("database.port", 3306)
@@ -60,22 +61,23 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("database.password", "password")
 	viper.SetDefault("database.database", "article_analysis")
 	viper.SetDefault("database.driver", "mysql")
-	
+
 	viper.SetDefault("server.port", 8080)
 	viper.SetDefault("server.mode", "debug")
-	
+
 	viper.SetDefault("openai.api_base", "https://api.moonshot.cn/v1")
 	viper.SetDefault("openai.model", "kimi-k2-0905-preview")
-	
+
 	viper.SetDefault("log.level", "info")
-	
+
 	// 读取环境变量
 	viper.AutomaticEnv()
-	
+
 	// 绑定特定的环境变量，设置优先级
 	viper.BindEnv("openai.api_key", "OPENAI_API_KEY")
 	viper.BindEnv("openai.api_base", "OPENAI_API_BASE")
-	
+	viper.BindEnv("openai.model", "OPENAI_MODEL")
+
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
 			// 配置文件不存在，使用默认值
@@ -84,11 +86,11 @@ func LoadConfig() (*Config, error) {
 			return nil, fmt.Errorf("读取配置文件失败: %w", err)
 		}
 	}
-	
+
 	var config Config
 	if err := viper.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("解析配置失败: %w", err)
 	}
-	
+
 	return &config, nil
 }

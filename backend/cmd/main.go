@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/joho/godotenv"
+
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
@@ -18,6 +20,13 @@ import (
 )
 
 func main() {
+	// 加载环境文件（优先级：.env -> .env.local；同时尝试父目录）
+	// 忽略不存在的文件加载错误
+	_ = godotenv.Load(".env")
+	_ = godotenv.Load(".env.local")
+	_ = godotenv.Load("../.env")
+	_ = godotenv.Load("../.env.local")
+
 	// 初始化配置
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -28,6 +37,13 @@ func main() {
 	// 初始化日志
 	log := logger.NewLogger(cfg.Log.Level)
 	defer log.Sync()
+
+	// 输出OpenAI配置加载状态（不打印敏感信息）
+	log.Info("OpenAI配置已加载",
+		zap.String("api_base", cfg.OpenAI.APIBase),
+		zap.String("model", cfg.OpenAI.Model),
+		zap.Bool("has_api_key", cfg.OpenAI.APIKey != ""),
+	)
 
 	// 连接数据库
 	db, err := initDB(cfg)
@@ -45,7 +61,7 @@ func main() {
 	// 初始化依赖
 	articleRepo := repository.NewArticleRepository(db)
 	analysisRepo := repository.NewAnalysisRepository(db)
-	
+
 	articleService := service.NewArticleService(articleRepo, log)
 	analysisService := service.NewAnalysisService(analysisRepo, articleRepo, cfg, log)
 
@@ -66,7 +82,7 @@ func main() {
 
 func initDB(cfg *config.Config) (*gorm.DB, error) {
 	var dialector gorm.Dialector
-	
+
 	switch cfg.Database.Driver {
 	case "sqlite":
 		dbPath := "./data/article_analysis.db"
@@ -87,7 +103,7 @@ func initDB(cfg *config.Config) (*gorm.DB, error) {
 	default:
 		return nil, fmt.Errorf("不支持的数据库驱动: %s", cfg.Database.Driver)
 	}
-	
+
 	db, err := gorm.Open(dialector, &gorm.Config{})
 	if err != nil {
 		return nil, err
@@ -104,7 +120,7 @@ func autoMigrate(db *gorm.DB) error {
 
 func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handler.AnalysisHandler, log *logger.Logger) *gin.Engine {
 	router := gin.New()
-	
+
 	// 全局中间件
 	router.Use(middleware.Logger(log))
 	router.Use(gin.Recovery())
@@ -113,7 +129,7 @@ func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handle
 	// 健康检查端点
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{
-			"status": "ok",
+			"status":  "ok",
 			"service": "article-analysis-backend",
 		})
 	})
@@ -137,7 +153,7 @@ func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handle
 			articles.POST("/:id/analyze", analysisHandler.AnalyzeArticle)
 			articles.GET("/:id/analysis", analysisHandler.GetAnalysisResult)
 		}
-		
+
 		// 分析任务状态
 		api.GET("/analysis/status/:task_id", analysisHandler.GetAnalysisStatus)
 	}
