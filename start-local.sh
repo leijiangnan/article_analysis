@@ -45,9 +45,17 @@ if [ ! -d "vendor" ] && [ ! -f "go.sum" ]; then
     go mod download
 fi
 
-# 直接使用源代码启动后端（确保使用最新代码）
-echo "使用最新源代码启动后端..."
-nohup go run cmd/main.go > ../logs/backend.log 2>&1 &
+# 编译后端二进制并启动（避免go run产生的子进程残留）
+echo "📦 编译后端二进制..."
+GOOS=$(go env GOOS)
+GOARCH=$(go env GOARCH)
+BIN_NAME="main-local"
+echo "目标平台: ${GOOS}/${GOARCH}, 输出二进制: ${BIN_NAME}"
+go build -o ${BIN_NAME} ./cmd/main.go
+chmod +x ${BIN_NAME}
+
+echo "使用编译后的二进制启动后端..."
+nohup ./${BIN_NAME} > ../logs/backend.log 2>&1 &
 
 BACKEND_PID=$!
 echo $BACKEND_PID > ../logs/backend.pid

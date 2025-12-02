@@ -32,12 +32,12 @@ func (s *ArticleService) UploadArticle(file *multipart.FileHeader, title, author
 	if !strings.HasSuffix(strings.ToLower(file.Filename), ".txt") {
 		return nil, errors.New("只支持TXT格式文件")
 	}
-	
+
 	// 限制文件大小 (10MB)
 	if file.Size > 10*1024*1024 {
 		return nil, errors.New("文件大小不能超过10MB")
 	}
-	
+
 	// 读取文件内容
 	src, err := file.Open()
 	if err != nil {
@@ -45,13 +45,13 @@ func (s *ArticleService) UploadArticle(file *multipart.FileHeader, title, author
 		return nil, errors.New("文件读取失败")
 	}
 	defer src.Close()
-	
+
 	content, err := io.ReadAll(src)
 	if err != nil {
 		s.log.Error("读取文件内容失败", err)
 		return nil, errors.New("文件内容读取失败")
 	}
-	
+
 	// 自动提取标题和作者（如果未提供）
 	if title == "" {
 		title = s.extractTitleFromContent(string(content), file.Filename)
@@ -59,17 +59,32 @@ func (s *ArticleService) UploadArticle(file *multipart.FileHeader, title, author
 	if author == "" {
 		author = s.extractAuthorFromContent(string(content))
 	}
-	
+	// 规范化标题与作者
+	title = strings.TrimSpace(title)
+	author = strings.TrimSpace(author)
+
+	// 重复校验：同标题不允许上传
+	if title != "" {
+		exists, err := s.repo.ExistsByTitle(title)
+		if err != nil {
+			s.log.Error("标题重复校验失败", err)
+			return nil, errors.New("服务内部错误")
+		}
+		if exists {
+			return nil, errors.New("文章已存在不能上传")
+		}
+	}
+
 	// 保存文件到本地
 	uploadDir := "./web/uploads"
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		s.log.Error("创建上传目录失败", err)
 		return nil, errors.New("文件保存失败")
 	}
-	
+
 	filename := time.Now().Format("20060102_150405_") + file.Filename
 	filePath := filepath.Join(uploadDir, filename)
-	
+
 	// 重新打开文件进行保存
 	src.Seek(0, 0)
 	dst, err := os.Create(filePath)
@@ -78,12 +93,12 @@ func (s *ArticleService) UploadArticle(file *multipart.FileHeader, title, author
 		return nil, errors.New("文件保存失败")
 	}
 	defer dst.Close()
-	
+
 	if _, err := io.Copy(dst, src); err != nil {
 		s.log.Error("保存文件失败", err)
 		return nil, errors.New("文件保存失败")
 	}
-	
+
 	// 创建文章记录
 	article := &model.Article{
 		Title:    title,
@@ -92,19 +107,19 @@ func (s *ArticleService) UploadArticle(file *multipart.FileHeader, title, author
 		FilePath: filePath,
 		FileSize: file.Size,
 	}
-	
+
 	if err := s.repo.Create(article); err != nil {
 		s.log.Error("保存文章记录失败", err)
 		// 清理已保存的文件
 		os.Remove(filePath)
 		return nil, errors.New("文章保存失败")
 	}
-	
-	s.log.Info("文章上传成功", 
-		zap.String("title", title), 
+
+	s.log.Info("文章上传成功",
+		zap.String("title", title),
 		zap.String("author", author),
 		zap.Int("size", int(file.Size)))
-	
+
 	return article, nil
 }
 
@@ -138,17 +153,32 @@ func (s *ArticleService) CreateArticle(title, author, content string) (*model.Ar
 	if author == "" {
 		author = s.extractAuthorFromContent(content)
 	}
-	
+	// 规范化标题与作者
+	title = strings.TrimSpace(title)
+	author = strings.TrimSpace(author)
+
+	// 重复校验：同标题不允许创建
+	if title != "" {
+		exists, err := s.repo.ExistsByTitle(title)
+		if err != nil {
+			s.log.Error("标题重复校验失败", err)
+			return nil, errors.New("服务内部错误")
+		}
+		if exists {
+			return nil, errors.New("文章已存在不能上传")
+		}
+	}
+
 	// 保存内容到本地文件
 	uploadDir := "./web/uploads"
 	if err := os.MkdirAll(uploadDir, 0755); err != nil {
 		s.log.Error("创建上传目录失败", err)
 		return nil, errors.New("文件保存失败")
 	}
-	
+
 	filename := time.Now().Format("20060102_150405_") + "input_text.txt"
 	filePath := filepath.Join(uploadDir, filename)
-	
+
 	// 创建文件并写入内容
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -156,12 +186,12 @@ func (s *ArticleService) CreateArticle(title, author, content string) (*model.Ar
 		return nil, errors.New("文件保存失败")
 	}
 	defer file.Close()
-	
+
 	if _, err := file.WriteString(content); err != nil {
 		s.log.Error("写入文件内容失败", err)
 		return nil, errors.New("文件内容保存失败")
 	}
-	
+
 	// 创建文章记录
 	article := &model.Article{
 		Title:    title,
@@ -170,19 +200,19 @@ func (s *ArticleService) CreateArticle(title, author, content string) (*model.Ar
 		FilePath: filePath,
 		FileSize: int64(len(content)),
 	}
-	
+
 	if err := s.repo.Create(article); err != nil {
 		s.log.Error("保存文章记录失败", err)
 		// 清理已保存的文件
 		os.Remove(filePath)
 		return nil, errors.New("文章保存失败")
 	}
-	
-	s.log.Info("文章创建成功", 
-		zap.String("title", title), 
+
+	s.log.Info("文章创建成功",
+		zap.String("title", title),
 		zap.String("author", author),
 		zap.Int("size", len(content)))
-	
+
 	return article, nil
 }
 
@@ -192,7 +222,7 @@ func (s *ArticleService) DeleteArticle(id uint64) error {
 	if err != nil {
 		return errors.New("文章不存在")
 	}
-	
+
 	// 删除关联的文件
 	if article.FilePath != "" {
 		if err := os.Remove(article.FilePath); err != nil {
@@ -200,13 +230,13 @@ func (s *ArticleService) DeleteArticle(id uint64) error {
 			// 继续删除数据库记录，即使文件删除失败
 		}
 	}
-	
+
 	// 删除数据库记录
 	if err := s.repo.Delete(id); err != nil {
 		s.log.Error("删除文章数据库记录失败", err)
 		return errors.New("删除文章失败")
 	}
-	
+
 	s.log.Info("文章删除成功", zap.Uint64("id", id), zap.String("title", article.Title))
 	return nil
 }
@@ -229,7 +259,7 @@ func (s *ArticleService) extractAuthorFromContent(content string) string {
 	// 简单的作者识别逻辑
 	authorKeywords := []string{"作者：", "作者:", "Author:", "By:"}
 	lines := strings.Split(content, "\n")
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		for _, keyword := range authorKeywords {
@@ -241,6 +271,6 @@ func (s *ArticleService) extractAuthorFromContent(content string) string {
 			}
 		}
 	}
-	
+
 	return "未知作者"
 }
