@@ -28,14 +28,14 @@ func (m *MockOpenAIClient) AnalyzeArticle(ctx context.Context, content string) (
 func TestOpenAIClient_AnalyzeArticle_Success(t *testing.T) {
 	// 创建mock logger
 	log := logger.NewLogger("test")
-	
+
 	// 创建OpenAI客户端
 	cfg := &config.Config{
 		OpenAI: config.OpenAIConfig{
 			APIKey: "test-api-key",
 		},
 	}
-	
+
 	client := NewOpenAIClient(cfg, log)
 	assert.NotNil(t, client)
 }
@@ -47,20 +47,21 @@ func TestOpenAIClient_buildAnalysisPrompt(t *testing.T) {
 			APIKey: "test-api-key",
 		},
 	}
-	
+
 	client := NewOpenAIClient(cfg, log)
-	
+
 	content := "这是一篇测试文章内容"
 	prompt := client.buildAnalysisPrompt(content)
-	
+
 	// 验证提示词包含必要的内容
-	assert.Contains(t, prompt, "请对以下文章进行深度分析")
+	assert.Contains(t, prompt, "深度分析")
+	assert.Contains(t, prompt, "只输出一个合法的JSON对象")
 	assert.Contains(t, prompt, content)
-	assert.Contains(t, prompt, "核心观点")
-	assert.Contains(t, prompt, "文件结构")
-	assert.Contains(t, prompt, "作者思路")
-	assert.Contains(t, prompt, "相关素材与事例")
-	assert.Contains(t, prompt, "JSON格式返回结果")
+	assert.Contains(t, prompt, "core_viewpoints")
+	assert.Contains(t, prompt, "file_structure")
+	assert.Contains(t, prompt, "author_thoughts")
+	assert.Contains(t, prompt, "related_materials")
+	assert.Contains(t, prompt, "JSON结构")
 }
 
 func TestOpenAIClient_parseAIResponse_Success(t *testing.T) {
@@ -70,9 +71,9 @@ func TestOpenAIClient_parseAIResponse_Success(t *testing.T) {
 			APIKey: "test-api-key",
 		},
 	}
-	
+
 	client := NewOpenAIClient(cfg, log)
-	
+
 	// 测试有效的JSON响应
 	responseContent := `
 以下是分析结果：
@@ -83,9 +84,9 @@ func TestOpenAIClient_parseAIResponse_Success(t *testing.T) {
   "related_materials": "相关素材"
 }
 希望这个分析对您有帮助！`
-	
+
 	result, err := client.parseAIResponse(responseContent)
-	
+
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
 	assert.Equal(t, "文章核心观点", result.CoreViewpoints)
@@ -101,18 +102,18 @@ func TestOpenAIClient_parseAIResponse_InvalidJSON(t *testing.T) {
 			APIKey: "test-api-key",
 		},
 	}
-	
+
 	client := NewOpenAIClient(cfg, log)
-	
+
 	// 测试无效的JSON响应
 	responseContent := `
 以下是分析结果：
 {
   "invalid_json": "缺少闭合括号"
 希望这个分析对您有帮助！`
-	
+
 	result, err := client.parseAIResponse(responseContent)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "无法解析AI响应格式")
@@ -125,17 +126,17 @@ func TestOpenAIClient_parseAIResponse_NoJSON(t *testing.T) {
 			APIKey: "test-api-key",
 		},
 	}
-	
+
 	client := NewOpenAIClient(cfg, log)
-	
+
 	// 测试没有JSON的响应
 	responseContent := `
 以下是分析结果：
 没有JSON格式的内容
 希望这个分析对您有帮助！`
-	
+
 	result, err := client.parseAIResponse(responseContent)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "无法解析AI响应格式")
@@ -143,7 +144,7 @@ func TestOpenAIClient_parseAIResponse_NoJSON(t *testing.T) {
 
 func TestOpenAIClient_getModel(t *testing.T) {
 	log := logger.NewLogger("test")
-	
+
 	// 测试配置了模型的情况
 	cfg1 := &config.Config{
 		OpenAI: config.OpenAIConfig{
@@ -153,7 +154,7 @@ func TestOpenAIClient_getModel(t *testing.T) {
 	}
 	client1 := NewOpenAIClient(cfg1, log)
 	assert.Equal(t, "gpt-4", client1.getModel())
-	
+
 	// 测试未配置模型的情况（使用默认）
 	cfg2 := &config.Config{
 		OpenAI: config.OpenAIConfig{
@@ -172,10 +173,10 @@ func TestAnalysisResult_JSONMarshal(t *testing.T) {
 		AuthorThoughts:   "作者思路",
 		RelatedMaterials: "相关素材",
 	}
-	
+
 	jsonData, err := json.Marshal(result)
 	assert.NoError(t, err)
-	
+
 	// 验证JSON格式
 	var unmarshaled AnalysisResponse
 	err = json.Unmarshal(jsonData, &unmarshaled)
