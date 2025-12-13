@@ -99,7 +99,7 @@ func (c *OpenAIClient) buildAnalysisPrompt(content string) string {
    - "author_thoughts"
    - "related_materials"
 3) 四个字段都必须给出内容；如果原文信息不足，请基于原文做合理推断并说明“不确定点”，不要留空。
-4) 如果某个字段需要列点说明：在字符串中使用“1. … 2. … 3. …”这样的编号格式。
+4) 如果某个字段需要列点说明：在字符串中使用“1. …\n 2. …\n 3. …\n ”这样的编号格式。
 5) 全部使用中文表达。
 
 文章内容：
