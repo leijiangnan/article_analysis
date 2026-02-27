@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -18,12 +19,14 @@ import (
 )
 
 type CrawlerService struct {
-	articleRepo   *repository.ArticleRepository
-	log           *logger.Logger
-	client        *http.Client
-	maxArticles   int
-	allocatorCtx  context.Context
+	articleRepo     *repository.ArticleRepository
+	log             *logger.Logger
+	client          *http.Client
+	maxArticles     int
+	maxConcurrency  int
+	allocatorCtx    context.Context
 	allocatorCancel context.CancelFunc
+	chromeMu        sync.Mutex
 }
 
 func NewCrawlerService(repo *repository.ArticleRepository, log *logger.Logger) *CrawlerService {
@@ -33,7 +36,8 @@ func NewCrawlerService(repo *repository.ArticleRepository, log *logger.Logger) *
 		client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
-		maxArticles: 2,
+		maxArticles:    2,
+		maxConcurrency: 5,
 	}
 }
 
@@ -86,31 +90,70 @@ func (s *CrawlerService) CrawlArticles(startURL string, count int) (*CrawlResult
 		Errors:     make([]string, 0),
 	}
 
-	crawledCount := 0
-	for i, linkInfo := range links {
-		if crawledCount >= count {
-			break
-		}
-
-		s.log.Info("正在爬取文章", zap.Int("index", i+1), zap.String("url", linkInfo.URL))
-
-		article, err := s.crawlArticle(linkInfo.URL, linkInfo.Title)
-		if err != nil {
-			s.log.Warn("爬取文章失败", zap.String("url", linkInfo.URL), zap.Error(err))
-			result.Errors = append(result.Errors, linkInfo.URL+": "+err.Error())
-			continue
-		}
-
-		if article.Date == "" && linkInfo.Date != "" {
-			article.Date = linkInfo.Date
-		}
-
-		result.Articles = append(result.Articles, *article)
-		crawledCount++
-		s.log.Info("文章爬取成功", zap.String("title", article.Title))
+	// 限制并发数
+	concurrency := s.maxConcurrency
+	if concurrency <= 0 {
+		concurrency = 1
+	}
+	if concurrency > count {
+		concurrency = count
 	}
 
-	result.CrawledCount = crawledCount
+	sem := make(chan struct{}, concurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for i, linkInfo := range links {
+		mu.Lock()
+		if len(result.Articles) >= count {
+			mu.Unlock()
+			break
+		}
+		mu.Unlock()
+
+		sem <- struct{}{}
+		wg.Add(1)
+
+		go func(index int, info ArticleLinkInfo) {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			mu.Lock()
+			if len(result.Articles) >= count {
+				mu.Unlock()
+				return
+			}
+			mu.Unlock()
+
+			s.log.Info("正在爬取文章", zap.Int("index", index+1), zap.String("url", info.URL))
+
+			article, err := s.crawlArticle(info.URL, info.Title)
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			if len(result.Articles) >= count {
+				return
+			}
+
+			if err != nil {
+				s.log.Warn("爬取文章失败", zap.String("url", info.URL), zap.Error(err))
+				result.Errors = append(result.Errors, info.URL+": "+err.Error())
+				return
+			}
+
+			if article.Date == "" && info.Date != "" {
+				article.Date = info.Date
+			}
+
+			result.Articles = append(result.Articles, *article)
+			s.log.Info("文章爬取成功", zap.String("title", article.Title))
+		}(i, linkInfo)
+	}
+
+	wg.Wait()
+
+	result.CrawledCount = len(result.Articles)
 	return result, nil
 }
 
@@ -581,8 +624,17 @@ func (s *CrawlerService) SetMaxArticles(max int) {
 	}
 }
 
+func (s *CrawlerService) SetMaxConcurrency(max int) {
+	if max > 0 {
+		s.maxConcurrency = max
+	}
+}
+
 // StartChrome 启动无头浏览器
 func (s *CrawlerService) StartChrome() error {
+	s.chromeMu.Lock()
+	defer s.chromeMu.Unlock()
+
 	if s.allocatorCtx != nil {
 		return nil
 	}
@@ -602,8 +654,23 @@ func (s *CrawlerService) StartChrome() error {
 		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"),
 	)
 
-	allocCtx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
-	s.allocatorCtx, s.allocatorCancel = allocCtx, func() {}
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+
+	// 创建一个浏览器实例
+	ctx, cancel := chromedp.NewContext(allocCtx)
+
+	// 确保浏览器启动
+	if err := chromedp.Run(ctx, chromedp.Evaluate("1", nil)); err != nil {
+		cancel()
+		allocCancel()
+		return err
+	}
+
+	s.allocatorCtx = ctx
+	s.allocatorCancel = func() {
+		cancel()
+		allocCancel()
+	}
 
 	s.log.Info("无头浏览器已启动", zap.String("userDataDir", userDataDir))
 	return nil
@@ -611,6 +678,9 @@ func (s *CrawlerService) StartChrome() error {
 
 // StopChrome 关闭无头浏览器
 func (s *CrawlerService) StopChrome() {
+	s.chromeMu.Lock()
+	defer s.chromeMu.Unlock()
+
 	if s.allocatorCancel != nil {
 		s.allocatorCancel()
 		s.allocatorCtx = nil
@@ -621,10 +691,8 @@ func (s *CrawlerService) StopChrome() {
 
 // fetchPageWithChrome 使用无头浏览器获取页面（用于微信文章）
 func (s *CrawlerService) fetchPageWithChrome(urlStr string) (*goquery.Document, error) {
-	if s.allocatorCtx == nil {
-		if err := s.StartChrome(); err != nil {
-			return nil, err
-		}
+	if err := s.StartChrome(); err != nil {
+		return nil, err
 	}
 
 	// 为每个请求创建一个新的浏览器 tab 上下文，避免并发冲突

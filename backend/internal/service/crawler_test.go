@@ -63,7 +63,7 @@ func TestCrawlerService_CrawlWeChatAndSaveToFile(t *testing.T) {
 
 	wechatURL := "https://mp.weixin.qq.com/s/Aj6q6kibtYmldE9nDWsaTA"
 
-	result, err := svc.CrawlArticles(wechatURL, 3)
+	result, err := svc.CrawlArticles(wechatURL, 20)
 
 	if err != nil {
 		t.Fatalf("爬取出错: %v", err)
