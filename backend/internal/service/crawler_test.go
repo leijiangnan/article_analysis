@@ -61,9 +61,12 @@ func TestCrawlerService_CrawlWeChatAndSaveToFile(t *testing.T) {
 	// 测试结束后关闭浏览器
 	defer svc.StopChrome()
 
+	// 降低并发数，避免触发反爬
+	svc.SetMaxConcurrency(3)
+
 	wechatURL := "https://mp.weixin.qq.com/s/Aj6q6kibtYmldE9nDWsaTA"
 
-	result, err := svc.CrawlArticles(wechatURL, 20)
+	result, err := svc.CrawlArticles(wechatURL, 15, 20)
 
 	if err != nil {
 		t.Fatalf("爬取出错: %v", err)
@@ -131,7 +134,7 @@ func TestCrawlerService_ExtractContent(t *testing.T) {
 		<article>
 			<p>This is paragraph 1.</p>
 			<p>This is paragraph 2.</p>
-			<a href="http://example.com">Link text</a>
+			<p><a href="http://example.com">Link text</a></p>
 			<script>console.log('should be removed')</script>
 		</article>
 	</body></html>`
@@ -179,7 +182,7 @@ func TestCrawlerService_CrawlArticles_InvalidURL(t *testing.T) {
 	log := logger.NewLogger("info")
 	svc := NewCrawlerService(nil, log)
 
-	_, err := svc.CrawlArticles("invalid-url", 2)
+	_, err := svc.CrawlArticles("invalid-url", 1, 2)
 	assert.Error(t, err)
 }
 
@@ -187,9 +190,9 @@ func TestCrawlerService_CrawlArticles_InvalidCount(t *testing.T) {
 	log := logger.NewLogger("info")
 	svc := NewCrawlerService(nil, log)
 
-	_, err := svc.CrawlArticles("http://example.com", 0)
+	_, err := svc.CrawlArticles("http://example.com", 0, 1)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "爬取数量必须大于0")
+	assert.Contains(t, err.Error(), "起始位置必须大于等于1")
 }
 
 func TestCrawlerService_MaxArticlesLimit(t *testing.T) {
@@ -215,7 +218,7 @@ func TestCrawlerService_MaxArticlesLimit(t *testing.T) {
 	}))
 	defer server.Close()
 
-	result, err := svc.CrawlArticles(server.URL, 10)
+	result, err := svc.CrawlArticles(server.URL, 1, 10)
 	assert.NoError(t, err)
 	assert.LessOrEqual(t, result.CrawledCount, 2)
 }
@@ -253,7 +256,7 @@ func TestCrawlerService_CrawlWeChatArticle(t *testing.T) {
 
 	wechatURL := "https://mp.weixin.qq.com/s/Aj6q6kibtYmldE9nDWsaTA"
 
-	result, err := svc.CrawlArticles(wechatURL, 1)
+	result, err := svc.CrawlArticles(wechatURL, 1, 1)
 
 	if err != nil {
 		t.Logf("爬取出错: %v", err)
@@ -283,7 +286,7 @@ func TestCrawlerService_FetchWeChatPage(t *testing.T) {
 	// 测试结束后关闭浏览器
 	defer svc.StopChrome()
 
-	wechatURL := "https://mp.weixin.qq.com/s?__biz=MzU3NDc5Nzc0NQ==&mid=2247529590&idx=1&sn=9a4495a19d06e9f8201e28fc03b0fe54&scene=21#wechat_redirect"
+	wechatURL := "https://mp.weixin.qq.com/s?__biz=MzU0MjYwNDU2Mw==&mid=2247519361&idx=1&sn=9474bcd0e9fae1ef5daed740ddcff44e&scene=21#wechat_redirect"
 
 	t.Logf("开始获取页面: %s", wechatURL)
 
@@ -311,4 +314,70 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func TestCrawlerService_CrawlArticles_Range(t *testing.T) {
+	log := logger.NewLogger("info")
+	svc := NewCrawlerService(nil, log)
+	svc.SetMaxArticles(100) // Ensure max articles is high enough
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusOK)
+		if r.URL.Path == "/" {
+			w.Write([]byte(`<html><body>
+				<a href="/article/1">Article 1</a>
+				<a href="/article/2">Article 2</a>
+				<a href="/article/3">Article 3</a>
+				<a href="/article/4">Article 4</a>
+				<a href="/article/5">Article 5</a>
+			</body></html>`))
+		} else {
+			w.Write([]byte(`<html><body>
+				<h1>Article</h1>
+				<div class="content"><p>Content</p></div>
+			</body></html>`))
+		}
+	}))
+	defer server.Close()
+
+	// Test case 1: Crawl 2 to 4 (Total 3 articles)
+	result, err := svc.CrawlArticles(server.URL, 2, 4)
+	assert.NoError(t, err)
+	assert.Equal(t, 5, result.TotalFound)
+	assert.Equal(t, 3, result.CrawledCount)
+	assert.Equal(t, 3, len(result.Articles))
+
+	// Verify we got Article 2, 3, 4
+	titles := make(map[string]bool)
+	urls := make(map[string]bool)
+	for _, a := range result.Articles {
+		titles[a.Title] = true
+		urls[a.URL] = true
+	}
+	assert.True(t, urls[server.URL+"/article/2"])
+	assert.True(t, urls[server.URL+"/article/3"])
+	assert.True(t, urls[server.URL+"/article/4"])
+	assert.False(t, urls[server.URL+"/article/1"])
+	assert.False(t, urls[server.URL+"/article/5"])
+
+	// Test case 2: Start out of range
+	result, err = svc.CrawlArticles(server.URL, 6, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, 5, result.TotalFound)
+	assert.Equal(t, 0, result.CrawledCount)
+
+	// Test case 3: End out of range
+	result, err = svc.CrawlArticles(server.URL, 4, 10)
+	assert.NoError(t, err)
+	assert.Equal(t, 5, result.TotalFound)
+	assert.Equal(t, 2, result.CrawledCount) // 4 and 5
+
+	// Verify we got Article 4, 5
+	urls = make(map[string]bool)
+	for _, a := range result.Articles {
+		urls[a.URL] = true
+	}
+	assert.True(t, urls[server.URL+"/article/4"])
+	assert.True(t, urls[server.URL+"/article/5"])
 }

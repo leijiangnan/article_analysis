@@ -6,6 +6,7 @@ import (
 	"article-analysis/pkg/logger"
 	"context"
 	"errors"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -56,14 +57,19 @@ type CrawlResult struct {
 	Errors       []string
 }
 
-func (s *CrawlerService) CrawlArticles(startURL string, count int) (*CrawlResult, error) {
-	if count <= 0 {
-		return nil, errors.New("爬取数量必须大于0")
+func (s *CrawlerService) CrawlArticles(startURL string, start, end int) (*CrawlResult, error) {
+	if start < 1 {
+		return nil, errors.New("起始位置必须大于等于1")
+	}
+	if end < start {
+		return nil, errors.New("结束位置必须大于等于起始位置")
 	}
 
-	if count > s.maxArticles {
-		s.log.Info("限制爬取数量", zap.Int("requested", count), zap.Int("max", s.maxArticles))
-		count = s.maxArticles
+	requestedCount := end - start + 1
+	if requestedCount > s.maxArticles {
+		s.log.Info("限制爬取数量", zap.Int("requested", requestedCount), zap.Int("max", s.maxArticles))
+		requestedCount = s.maxArticles
+		end = start + requestedCount - 1
 	}
 
 	parsedURL, err := url.Parse(startURL)
@@ -74,7 +80,8 @@ func (s *CrawlerService) CrawlArticles(startURL string, count int) (*CrawlResult
 
 	s.log.Info("开始爬取文章",
 		zap.String("url", startURL),
-		zap.Int("count", count))
+		zap.Int("start", start),
+		zap.Int("end", end))
 
 	doc, err := s.fetchPage(startURL)
 	if err != nil {
@@ -82,10 +89,31 @@ func (s *CrawlerService) CrawlArticles(startURL string, count int) (*CrawlResult
 	}
 
 	links := s.extractArticleLinksWithDates(doc, baseURL)
-	s.log.Info("找到文章链接", zap.Int("count", len(links)))
+	totalFound := len(links)
+	s.log.Info("找到文章链接", zap.Int("count", totalFound))
+
+	// Adjust start/end based on actual links found
+	if start > totalFound {
+		return &CrawlResult{
+			TotalFound:   totalFound,
+			CrawledCount: 0,
+			Articles:     make([]CrawledArticle, 0),
+			Errors:       make([]string, 0),
+		}, nil
+	}
+
+	if end > totalFound {
+		end = totalFound
+	}
+
+	// Calculate slice indices (0-based)
+	startIndex := start - 1
+	endIndex := end
+	linksToCrawl := links[startIndex:endIndex]
+	targetCount := len(linksToCrawl)
 
 	result := &CrawlResult{
-		TotalFound: len(links),
+		TotalFound: totalFound,
 		Articles:   make([]CrawledArticle, 0),
 		Errors:     make([]string, 0),
 	}
@@ -95,17 +123,17 @@ func (s *CrawlerService) CrawlArticles(startURL string, count int) (*CrawlResult
 	if concurrency <= 0 {
 		concurrency = 1
 	}
-	if concurrency > count {
-		concurrency = count
+	if concurrency > targetCount {
+		concurrency = targetCount
 	}
 
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
-	for i, linkInfo := range links {
+	for i, linkInfo := range linksToCrawl {
 		mu.Lock()
-		if len(result.Articles) >= count {
+		if len(result.Articles) >= targetCount {
 			mu.Unlock()
 			break
 		}
@@ -114,25 +142,28 @@ func (s *CrawlerService) CrawlArticles(startURL string, count int) (*CrawlResult
 		sem <- struct{}{}
 		wg.Add(1)
 
+		// Calculate global index (1-based)
+		globalIndex := start + i
+
 		go func(index int, info ArticleLinkInfo) {
 			defer wg.Done()
 			defer func() { <-sem }()
 
 			mu.Lock()
-			if len(result.Articles) >= count {
+			if len(result.Articles) >= targetCount {
 				mu.Unlock()
 				return
 			}
 			mu.Unlock()
 
-			s.log.Info("正在爬取文章", zap.Int("index", index+1), zap.String("url", info.URL))
+			s.log.Info("正在爬取文章", zap.Int("index", index), zap.String("url", info.URL))
 
 			article, err := s.crawlArticle(info.URL, info.Title)
 
 			mu.Lock()
 			defer mu.Unlock()
 
-			if len(result.Articles) >= count {
+			if len(result.Articles) >= targetCount {
 				return
 			}
 
@@ -148,7 +179,7 @@ func (s *CrawlerService) CrawlArticles(startURL string, count int) (*CrawlResult
 
 			result.Articles = append(result.Articles, *article)
 			s.log.Info("文章爬取成功", zap.String("title", article.Title))
-		}(i, linkInfo)
+		}(globalIndex, linkInfo)
 	}
 
 	wg.Wait()
@@ -639,19 +670,20 @@ func (s *CrawlerService) StartChrome() error {
 		return nil
 	}
 
-	// 使用独立的用户数据目录
-	userDataDir := "/tmp/chromedp-user-data-dir"
+	// 使用独立的用户数据目录，避免冲突
+	// userDataDir := "/tmp/chromedp-user-data-dir"
 
 	opts := append(chromedp.DefaultExecAllocatorOptions[:],
-		chromedp.UserDataDir(userDataDir),
+		// chromedp.UserDataDir(userDataDir),
 		chromedp.Flag("headless", true),
 		chromedp.Flag("disable-gpu", true),
 		chromedp.Flag("no-sandbox", true),
 		chromedp.Flag("disable-dev-shm-usage", true),
 		// 反检测选项
+		chromedp.Flag("enable-automation", false),
 		chromedp.Flag("disable-blink-features", "AutomationControlled"),
 		chromedp.WindowSize(1920, 1080),
-		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"),
+		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"),
 	)
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
@@ -672,7 +704,7 @@ func (s *CrawlerService) StartChrome() error {
 		allocCancel()
 	}
 
-	s.log.Info("无头浏览器已启动", zap.String("userDataDir", userDataDir))
+	s.log.Info("无头浏览器已启动")
 	return nil
 }
 
@@ -709,6 +741,11 @@ func (s *CrawlerService) fetchPageWithChrome(urlStr string) (*goquery.Document, 
 	// 使用 goroutine 来实现更可靠的超时控制
 	done := make(chan error, 1)
 	go func() {
+		// 随机延迟 2-5 秒
+		delay := time.Duration(2000+rand.Intn(3000)) * time.Millisecond
+		s.log.Info("等待随机延迟", zap.String("url", urlStr), zap.Duration("delay", delay))
+		time.Sleep(delay)
+
 		done <- chromedp.Run(ctx,
 			chromedp.Navigate(urlStr),
 			// 等待页面加载完成，最多等 3 秒

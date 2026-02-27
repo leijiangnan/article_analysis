@@ -21,7 +21,8 @@ func NewCrawlerHandler(crawlerService *service.CrawlerService) *CrawlerHandler {
 
 type CrawlRequest struct {
 	URL   string `json:"url" binding:"required,url"`
-	Count int    `json:"count" binding:"required,min=1,max=100"`
+	Start int    `json:"start" binding:"required,min=1"`
+	End   int    `json:"end" binding:"required,min=1,gtefield=Start"`
 }
 
 type CrawlResponse struct {
@@ -52,7 +53,7 @@ func (h *CrawlerHandler) CrawlArticles(c *gin.Context) {
 		return
 	}
 
-	result, err := h.crawlerService.CrawlArticles(req.URL, req.Count)
+	result, err := h.crawlerService.CrawlArticles(req.URL, req.Start, req.End)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, model.ApiResponse{
 			Code:      400,
