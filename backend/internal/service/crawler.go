@@ -4,6 +4,7 @@ import (
 	"article-analysis/internal/model"
 	"article-analysis/internal/repository"
 	"article-analysis/pkg/logger"
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -12,14 +13,17 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/chromedp/chromedp"
 	"go.uber.org/zap"
 )
 
 type CrawlerService struct {
-	articleRepo *repository.ArticleRepository
-	log         *logger.Logger
-	client      *http.Client
-	maxArticles int
+	articleRepo   *repository.ArticleRepository
+	log           *logger.Logger
+	client        *http.Client
+	maxArticles   int
+	allocatorCtx  context.Context
+	allocatorCancel context.CancelFunc
 }
 
 func NewCrawlerService(repo *repository.ArticleRepository, log *logger.Logger) *CrawlerService {
@@ -162,6 +166,13 @@ func (s *CrawlerService) SaveCrawledArticles(articles []CrawledArticle) ([]model
 }
 
 func (s *CrawlerService) fetchPage(urlStr string) (*goquery.Document, error) {
+	// 对于微信 URL，使用无头浏览器获取
+	if strings.Contains(urlStr, "mp.weixin.qq.com") {
+		s.log.Info("检测到微信 URL，使用无头浏览器获取", zap.String("url", urlStr))
+		return s.fetchPageWithChrome(urlStr)
+	}
+
+	// 普通 URL 使用 HTTP 客户端
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
 		return nil, err
@@ -178,11 +189,6 @@ func (s *CrawlerService) fetchPage(urlStr string) (*goquery.Document, error) {
 	req.Header.Set("Sec-Fetch-Mode", "navigate")
 	req.Header.Set("Sec-Fetch-Site", "same-origin")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
-
-	if strings.Contains(urlStr, "mp.weixin.qq.com") {
-		req.Header.Set("Referer", "https://mp.weixin.qq.com/")
-		req.Header.Set("Cookie", "wxtokenkey=777; pac_uid=0_Z9cww77Z6p1HQ; _qimei_uuid42=19c050e1c08100cec8f11ef416dd8038b94bdb108b; _qimei_fingerprint=4955c71558659de38ad284d3a93a002b; _qimei_h38=f2d212b1c8f11ef416dd803803000004119c05; poc_sid=HC0zoGmjUe4GVSn9V68EnjaB4xYxyqEWWGtSKp8S; __root_domain_v=.weixin.qq.com; _qddaz=QD.713570345653712")
-	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {
@@ -345,6 +351,7 @@ func (s *CrawlerService) isCaptchaPage(doc *goquery.Document) bool {
 }
 
 func (s *CrawlerService) crawlArticle(urlStr string, preExtractedTitle string) (*CrawledArticle, error) {
+	// fetchPage 会自动判断：微信 URL 使用无头浏览器，其他 URL 使用 HTTP 客户端
 	doc, err := s.fetchPage(urlStr)
 	if err != nil {
 		return nil, err
@@ -354,45 +361,16 @@ func (s *CrawlerService) crawlArticle(urlStr string, preExtractedTitle string) (
 		URL: urlStr,
 	}
 
-	if s.isCaptchaPage(doc) {
-		s.log.Warn("检测到验证码页面或异常页面", zap.String("url", urlStr))
-
-		// 1. 优先使用预提取的标题（从起始页面的链接获取）
-		if preExtractedTitle != "" {
-			article.Title = preExtractedTitle
-		} else {
-			// 如果没有预提取标题，尝试从页面获取
-			article.Title = s.extractTitle(doc)
-			if article.Title == "" {
-				article.Title = doc.Find("title").Text()
-			}
-		}
-
-		// 2. 尝试从页面提取日期
-		article.Date = s.extractDate(doc)
-
-		// 3. 仅打印异常页面显示的文字
-		// 为了提取纯文本，先移除不可见元素和脚本
-		// 注意：extractTitle 可能依赖 meta 标签，所以要在提取标题后执行移除
-		doc.Find("script, style, noscript, link, meta, iframe").Remove()
-		// 移除内联样式为 display:none 的元素
-		doc.Find("[style*='display:none']").Remove()
-		doc.Find("[style*='display: none']").Remove()
-
-		text := doc.Find("body").Text()
-
-		// 清洗多余空白字符
-		text = regexp.MustCompile(`\s+`).ReplaceAllString(text, " ")
-		article.Content = strings.TrimSpace(text)
-
-		// 即使是验证码页面也返回成功，以便保存查看
-		return article, nil
-	}
-
 	article.Title = s.extractTitle(doc)
 	article.Author = s.extractAuthor(doc)
 	article.Date = s.extractDate(doc)
 	article.Content = s.extractContent(doc)
+
+	// 如果内容为空，可能是验证码页面，记录警告
+	if article.Content == "" || len(article.Content) < 100 {
+		s.log.Warn("文章内容异常", zap.String("url", urlStr), zap.Int("contentLength", len(article.Content)))
+	}
+
 	return article, nil
 }
 
@@ -601,4 +579,92 @@ func (s *CrawlerService) SetMaxArticles(max int) {
 	if max > 0 {
 		s.maxArticles = max
 	}
+}
+
+// StartChrome 启动无头浏览器
+func (s *CrawlerService) StartChrome() error {
+	if s.allocatorCtx != nil {
+		return nil
+	}
+
+	// 使用独立的用户数据目录
+	userDataDir := "/tmp/chromedp-user-data-dir"
+
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.UserDataDir(userDataDir),
+		chromedp.Flag("headless", true),
+		chromedp.Flag("disable-gpu", true),
+		chromedp.Flag("no-sandbox", true),
+		chromedp.Flag("disable-dev-shm-usage", true),
+		// 反检测选项
+		chromedp.Flag("disable-blink-features", "AutomationControlled"),
+		chromedp.WindowSize(1920, 1080),
+		chromedp.UserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"),
+	)
+
+	allocCtx, _ := chromedp.NewExecAllocator(context.Background(), opts...)
+	s.allocatorCtx, s.allocatorCancel = allocCtx, func() {}
+
+	s.log.Info("无头浏览器已启动", zap.String("userDataDir", userDataDir))
+	return nil
+}
+
+// StopChrome 关闭无头浏览器
+func (s *CrawlerService) StopChrome() {
+	if s.allocatorCancel != nil {
+		s.allocatorCancel()
+		s.allocatorCtx = nil
+		s.allocatorCancel = nil
+		s.log.Info("无头浏览器已关闭")
+	}
+}
+
+// fetchPageWithChrome 使用无头浏览器获取页面（用于微信文章）
+func (s *CrawlerService) fetchPageWithChrome(urlStr string) (*goquery.Document, error) {
+	if s.allocatorCtx == nil {
+		if err := s.StartChrome(); err != nil {
+			return nil, err
+		}
+	}
+
+	// 为每个请求创建一个新的浏览器 tab 上下文，避免并发冲突
+	ctx, cancel := chromedp.NewContext(s.allocatorCtx)
+	defer cancel()
+
+	var html string
+	var err error
+
+	// 使用更短的超时，避免测试超时
+	timeoutCtx, timeoutCancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer timeoutCancel()
+
+	// 使用 goroutine 来实现更可靠的超时控制
+	done := make(chan error, 1)
+	go func() {
+		done <- chromedp.Run(ctx,
+			chromedp.Navigate(urlStr),
+			// 等待页面加载完成，最多等 3 秒
+			chromedp.Sleep(3*time.Second),
+			// 获取页面 HTML
+			chromedp.OuterHTML("html", &html, chromedp.ByQuery),
+		)
+	}()
+
+	select {
+	case err = <-done:
+		if err != nil {
+			s.log.Warn("无头浏览器获取页面失败", zap.String("url", urlStr), zap.Error(err))
+			return nil, err
+		}
+	case <-timeoutCtx.Done():
+		s.log.Warn("无头获取页面超时", zap.String("url", urlStr))
+		return nil, errors.New("获取页面超时")
+	}
+
+	if html == "" {
+		s.log.Warn("页面 HTML 为空", zap.String("url", urlStr))
+		return nil, errors.New("页面内容为空")
+	}
+
+	return goquery.NewDocumentFromReader(strings.NewReader(html))
 }

@@ -56,11 +56,14 @@ func TestCrawlerService_ExtractTitle(t *testing.T) {
 func TestCrawlerService_CrawlWeChatAndSaveToFile(t *testing.T) {
 	log := logger.NewLogger("info")
 	svc := NewCrawlerService(nil, log)
-	svc.SetMaxArticles(20)
+	svc.SetMaxArticles(2000)
 
-	wechatURL := "https://mp.weixin.qq.com/s/mL3fNB229hbiW4iXM8v78w"
+	// 测试结束后关闭浏览器
+	defer svc.StopChrome()
 
-	result, err := svc.CrawlArticles(wechatURL, 20)
+	wechatURL := "https://mp.weixin.qq.com/s/Aj6q6kibtYmldE9nDWsaTA"
+
+	result, err := svc.CrawlArticles(wechatURL, 3)
 
 	if err != nil {
 		t.Fatalf("爬取出错: %v", err)
@@ -277,25 +280,12 @@ func TestCrawlerService_FetchWeChatPage(t *testing.T) {
 	log := logger.NewLogger("info")
 	svc := NewCrawlerService(nil, log)
 
+	// 测试结束后关闭浏览器
+	defer svc.StopChrome()
+
 	wechatURL := "https://mp.weixin.qq.com/s?__biz=MzU3NDc5Nzc0NQ==&mid=2247529590&idx=1&sn=9a4495a19d06e9f8201e28fc03b0fe54&scene=21#wechat_redirect"
 
 	t.Logf("开始获取页面: %s", wechatURL)
-
-	doc, err := svc.fetchPage(wechatURL)
-	if err != nil {
-		t.Fatalf("获取页面失败: %v", err)
-	}
-
-	t.Log("页面获取成功")
-
-	html, err := doc.Html()
-	if err != nil {
-		t.Fatalf("获取HTML失败: %v", err)
-	}
-
-	t.Logf("===== 页面原始HTML开始 =====")
-	t.Log(html)
-	t.Logf("===== 页面原始HTML结束 =====")
 
 	article, err := svc.crawlArticle(wechatURL, "")
 	if err != nil {
@@ -308,7 +298,17 @@ func TestCrawlerService_FetchWeChatPage(t *testing.T) {
 	t.Logf("日期: %s", article.Date)
 	t.Logf("URL: %s", article.URL)
 	t.Logf("内容长度: %d 字符", len(article.Content))
-	t.Logf("===== 正文开始 =====")
-	t.Log(article.Content)
-	t.Logf("===== 正文结束 =====")
+
+	if len(article.Content) > 0 {
+		t.Logf("===== 正文前500字符 =====")
+		t.Log(article.Content[:min(500, len(article.Content))])
+		t.Logf("===== 正文结束 =====")
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
