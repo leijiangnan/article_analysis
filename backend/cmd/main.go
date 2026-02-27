@@ -64,12 +64,14 @@ func main() {
 
 	articleService := service.NewArticleService(articleRepo, log)
 	analysisService := service.NewAnalysisService(analysisRepo, articleRepo, cfg, log)
+	crawlerService := service.NewCrawlerService(articleRepo, log)
 
 	articleHandler := handler.NewArticleHandler(articleService)
 	analysisHandler := handler.NewAnalysisHandler(analysisService)
+	crawlerHandler := handler.NewCrawlerHandler(crawlerService)
 
 	// 设置路由
-	router := setupRouter(articleHandler, analysisHandler, log)
+	router := setupRouter(articleHandler, analysisHandler, crawlerHandler, log)
 
 	// 启动服务
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
@@ -118,7 +120,7 @@ func autoMigrate(db *gorm.DB) error {
 	)
 }
 
-func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handler.AnalysisHandler, log *logger.Logger) *gin.Engine {
+func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handler.AnalysisHandler, crawlerHandler *handler.CrawlerHandler, log *logger.Logger) *gin.Engine {
 	router := gin.New()
 
 	// 全局中间件
@@ -156,6 +158,9 @@ func setupRouter(articleHandler *handler.ArticleHandler, analysisHandler *handle
 
 		// 分析任务状态
 		api.GET("/analysis/status/:task_id", analysisHandler.GetAnalysisStatus)
+
+		// 爬虫相关路由
+		api.POST("/crawl", crawlerHandler.CrawlArticles)
 	}
 
 	return router

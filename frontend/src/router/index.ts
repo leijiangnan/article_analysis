@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import ArticleListView from '../views/ArticleListView.vue'
 import ArticleDetailView from '../views/ArticleDetailView.vue'
 import ArticleUploadView from '../views/ArticleUploadView.vue'
+import ArticleCrawlerView from '../views/ArticleCrawlerView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,6 +22,11 @@ const router = createRouter({
       path: '/articles/upload',
       name: 'article-upload',
       component: ArticleUploadView,
+    },
+    {
+      path: '/articles/crawl',
+      name: 'article-crawl',
+      component: ArticleCrawlerView,
     },
     {
       path: '/articles/:id',

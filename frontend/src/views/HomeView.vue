@@ -9,6 +9,10 @@
               <el-icon><upload-filled /></el-icon>
               上传文章
             </el-button>
+            <el-button type="success" @click="$router.push('/articles/crawl')">
+              <el-icon><download /></el-icon>
+              爬取文章
+            </el-button>
             <el-button @click="$router.push('/articles')">
               <el-icon><document /></el-icon>
               文章列表
@@ -56,7 +60,7 @@
 </template>
 
 <script setup lang="ts">
-import { UploadFilled, Document } from '@element-plus/icons-vue'
+import { UploadFilled, Document, Download } from '@element-plus/icons-vue'
 </script>
 
 <style scoped>
