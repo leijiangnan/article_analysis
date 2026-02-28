@@ -424,7 +424,54 @@ func (s *CrawlerService) isCaptchaPage(doc *goquery.Document) bool {
 		len(strings.TrimSpace(text)) < 100 || !strings.Contains(html, "js_content")
 }
 
+func (s *CrawlerService) ensureChksmParam(urlStr string) string {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return urlStr
+	}
+
+	rawQuery := parsedURL.RawQuery
+
+	if strings.Contains(rawQuery, "chksm=") {
+		return urlStr
+	}
+
+	if !strings.Contains(rawQuery, "sn=") {
+		return urlStr
+	}
+
+	chksm := generateRandomChksm()
+
+	snIndex := strings.Index(rawQuery, "sn=")
+	afterSn := rawQuery[snIndex+3:]
+	nextAmp := strings.Index(afterSn, "&")
+
+	var snValue string
+	if nextAmp == -1 {
+		snValue = afterSn
+	} else {
+		snValue = afterSn[:nextAmp]
+	}
+
+	insertPos := snIndex + 3 + len(snValue)
+	newRawQuery := rawQuery[:insertPos] + "&chksm=" + chksm + rawQuery[insertPos:]
+
+	parsedURL.RawQuery = newRawQuery
+	return parsedURL.String()
+}
+
+func generateRandomChksm() string {
+	const hexChars = "0123456789abcdef"
+	result := make([]byte, 48)
+	for i := range result {
+		result[i] = hexChars[rand.Intn(len(hexChars))]
+	}
+	return string(result)
+}
+
 func (s *CrawlerService) crawlArticle(urlStr string, preExtractedTitle string) (*CrawledArticle, error) {
+	urlStr = s.ensureChksmParam(urlStr)
+
 	// fetchPage 会自动判断：微信 URL 使用无头浏览器，其他 URL 使用 HTTP 客户端
 	doc, err := s.fetchPage(urlStr)
 	if err != nil {

@@ -66,7 +66,7 @@ func TestCrawlerService_CrawlWeChatAndSaveToFile(t *testing.T) {
 
 	wechatURL := "https://mp.weixin.qq.com/s/Aj6q6kibtYmldE9nDWsaTA"
 
-	result, err := svc.CrawlArticles(wechatURL, 15, 20)
+	result, err := svc.CrawlArticles(wechatURL, 1, 20)
 
 	if err != nil {
 		t.Fatalf("爬取出错: %v", err)
@@ -286,7 +286,7 @@ func TestCrawlerService_FetchWeChatPage(t *testing.T) {
 	// 测试结束后关闭浏览器
 	defer svc.StopChrome()
 
-	wechatURL := "https://mp.weixin.qq.com/s?__biz=MzU0MjYwNDU2Mw==&mid=2247519361&idx=1&sn=9474bcd0e9fae1ef5daed740ddcff44e&scene=21#wechat_redirect"
+	wechatURL := "https://mp.weixin.qq.com/s?__biz=MzU3NDc5Nzc0NQ==&mid=2247530369&idx=1&sn=7f6c06582003e1834f03d1c53a53ab5c&scene=21#wechat_redirect"
 
 	t.Logf("开始获取页面: %s", wechatURL)
 
