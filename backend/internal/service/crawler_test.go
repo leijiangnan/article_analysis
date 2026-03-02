@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
@@ -58,15 +59,39 @@ func TestCrawlerService_CrawlWeChatAndSaveToFile(t *testing.T) {
 	svc := NewCrawlerService(nil, log)
 	svc.SetMaxArticles(2000)
 
-	// 测试结束后关闭浏览器
 	defer svc.StopChrome()
 
-	// 降低并发数，避免触发反爬
-	svc.SetMaxConcurrency(3)
+	svc.SetMaxConcurrency(5)
 
 	wechatURL := "https://mp.weixin.qq.com/s/Aj6q6kibtYmldE9nDWsaTA"
 
-	result, err := svc.CrawlArticles(wechatURL, 1, 20)
+	outputPath := "/Users/bytedance/goproject/my/article_analysis/crawled_articles_6.txt"
+	file, err := os.Create(outputPath)
+	if err != nil {
+		t.Fatalf("创建文件失败: %v", err)
+	}
+	defer file.Close()
+
+	var mu sync.Mutex
+	articleIndex := 0
+
+	callback := func(article *CrawledArticle, index int) {
+		mu.Lock()
+		defer mu.Unlock()
+
+		articleIndex++
+		content := fmt.Sprintf("=== 文章 %d ===\n标题: %s\n作者: %s\n日期: %s\nURL: %s\n\n%s\n\n",
+			articleIndex, article.Title, article.Author, article.Date, article.URL, article.Content)
+
+		_, err := file.WriteString(content)
+		if err != nil {
+			t.Logf("写入文章 %d 失败: %v", articleIndex, err)
+		}
+		file.Sync()
+		t.Logf("已写入第 %d 篇文章: %s", articleIndex, article.Title)
+	}
+
+	result, err := svc.CrawlArticlesWithCallback(wechatURL, 801, 870, callback)
 
 	if err != nil {
 		t.Fatalf("爬取出错: %v", err)
@@ -74,25 +99,7 @@ func TestCrawlerService_CrawlWeChatAndSaveToFile(t *testing.T) {
 
 	t.Logf("找到链接数: %d", result.TotalFound)
 	t.Logf("爬取数量: %d", result.CrawledCount)
-
-	outputPath := "/Users/bytedance/goproject/my/article_analysis/crawled_articles.txt"
-	file, err := os.Create(outputPath)
-	if err != nil {
-		t.Fatalf("创建文件失败: %v", err)
-	}
-	defer file.Close()
-
-	for i, article := range result.Articles {
-		content := fmt.Sprintf("=== 文章 %d ===\n标题: %s\n作者: %s\n日期: %s\nURL: %s\n\n%s\n\n",
-			i+1, article.Title, article.Author, article.Date, article.URL, article.Content)
-
-		_, err := file.WriteString(content)
-		if err != nil {
-			t.Logf("写入文章 %d 失败: %v", i+1, err)
-		}
-	}
-
-	t.Logf("已保存 %d 篇文章到: %s", len(result.Articles), outputPath)
+	t.Logf("已保存 %d 篇文章到: %s", articleIndex, outputPath)
 }
 
 func TestCrawlerService_ExtractAuthor(t *testing.T) {

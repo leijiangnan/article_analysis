@@ -58,6 +58,12 @@ type CrawlResult struct {
 }
 
 func (s *CrawlerService) CrawlArticles(startURL string, start, end int) (*CrawlResult, error) {
+	return s.CrawlArticlesWithCallback(startURL, start, end, nil)
+}
+
+type ArticleCallback func(article *CrawledArticle, index int)
+
+func (s *CrawlerService) CrawlArticlesWithCallback(startURL string, start, end int, callback ArticleCallback) (*CrawlResult, error) {
 	if start < 1 {
 		return nil, errors.New("起始位置必须大于等于1")
 	}
@@ -178,6 +184,11 @@ func (s *CrawlerService) CrawlArticles(startURL string, start, end int) (*CrawlR
 			}
 
 			result.Articles = append(result.Articles, *article)
+
+			if callback != nil {
+				callback(article, len(result.Articles))
+			}
+
 			s.log.Info("文章爬取成功", zap.String("title", article.Title))
 		}(globalIndex, linkInfo)
 	}
